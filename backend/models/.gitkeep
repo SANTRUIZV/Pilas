@@ -1,0 +1,4 @@
+# Aquí se guardan los artefactos del modelo entrenado:
+#   risk_model.json   — Booster de XGBoost
+#   model_meta.json   — métricas + risk_scale
+# Se generan con:  python -m ml.train   (ver backend/README.md)

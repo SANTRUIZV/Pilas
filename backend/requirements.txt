@@ -1,0 +1,14 @@
+# API (mínimo para servir con fallback analítico)
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# Modelado / entrenamiento (necesario para `ml/train.py` y para servir con modelo)
+numpy==2.2.1
+pandas==2.2.3
+openpyxl==3.1.5
+scikit-learn==1.6.0
+xgboost==2.1.3
+
+# Explicabilidad (opcional, usado en el notebook)
+shap==0.46.0

@@ -1,0 +1,20 @@
+{
+  "name": "pilas-gobierno",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Pilas · Gobierno — Centro de Mando de Seguridad de Cali (dashboard para la Secretaría de Seguridad y Justicia)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}
