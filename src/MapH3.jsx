@@ -7,7 +7,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { polygonToCells, cellToBoundary, latLngToCell } from "h3-js";
+import { polygonToCells, cellToBoundary, latLngToCell, gridDisk } from "h3-js";
 import { ZONES, CAI as CAI_STATIC } from "./data.js";
 import { COMUNAS, COMUNA_POLYS, CALI_CENTER } from "./comunas.js";
 import { useComunaRisk, useApiData } from "./hooks.js";
@@ -86,6 +86,34 @@ export default function MapH3({
     const byCell = new Map(); // h3 index → nº de comuna
     for (const { n, poly } of COMUNA_POLYS) {
       for (const h of polygonToCells([poly], res)) byCell.set(h, n); // loops en [lat, lon]
+    }
+    // Rellena huecos interiores: celdas que cayeron en un mini-espacio entre dos
+    // comunas vecinas (por la simplificación de cada borde) y quedaron sin asignar.
+    // Se rellena cualquier celda vacía rodeada por ≥5 vecinos ya asignados, con la
+    // comuna mayoritaria. No deforma la silueta: las celdas del borde exterior de
+    // la ciudad tienen ≤4 vecinos asignados, así que nunca se rellenan.
+    for (let pass = 0; pass < 3; pass++) {
+      const holes = new Map(); // h3 vacío → [comunas de sus vecinos asignados]
+      for (const h of byCell.keys()) {
+        for (const nb of gridDisk(h, 1)) {
+          if (nb === h || byCell.has(nb)) continue;
+          if (!holes.has(nb)) holes.set(nb, []);
+          holes.get(nb).push(byCell.get(h));
+        }
+      }
+      let filled = 0;
+      for (const [h, neigh] of holes) {
+        if (neigh.length < 5) continue;
+        const counts = {};
+        let best = neigh[0], bestC = 0;
+        for (const n of neigh) {
+          counts[n] = (counts[n] || 0) + 1;
+          if (counts[n] > bestC) { bestC = counts[n]; best = n; }
+        }
+        byCell.set(h, best);
+        filled++;
+      }
+      if (!filled) break;
     }
     // Garantiza al menos un hexágono por comuna (la celda de su punto-etiqueta).
     for (const c of COMUNAS) {
