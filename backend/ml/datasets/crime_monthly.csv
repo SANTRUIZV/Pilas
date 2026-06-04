@@ -1,0 +1,684 @@
+conflictividad,year,month,count
+Amenaza,2010,1,44
+Amenaza,2010,2,38
+Amenaza,2010,3,24
+Amenaza,2010,4,16
+Amenaza,2010,5,53
+Amenaza,2010,6,27
+Amenaza,2010,7,17
+Amenaza,2010,8,11
+Amenaza,2010,9,27
+Amenaza,2010,10,19
+Amenaza,2010,11,14
+Amenaza,2010,12,17
+Amenaza,2011,1,33
+Amenaza,2011,2,27
+Amenaza,2011,3,57
+Amenaza,2011,4,17
+Amenaza,2011,5,18
+Amenaza,2011,6,18
+Amenaza,2011,7,45
+Amenaza,2011,8,71
+Amenaza,2011,9,33
+Amenaza,2011,10,50
+Amenaza,2011,11,45
+Amenaza,2011,12,13
+Amenaza,2013,1,48
+Amenaza,2013,2,71
+Amenaza,2013,3,46
+Amenaza,2013,4,16
+Amenaza,2013,5,47
+Amenaza,2013,6,11
+Amenaza,2013,7,26
+Amenaza,2013,8,15
+Amenaza,2013,9,5
+Amenaza,2013,10,1
+Amenaza,2014,1,79
+Amenaza,2014,2,51
+Amenaza,2014,3,111
+Amenaza,2014,4,99
+Amenaza,2014,5,97
+Amenaza,2014,6,10
+Amenaza,2014,7,3
+Amenaza,2014,8,17
+Amenaza,2014,9,128
+Amenaza,2014,10,113
+Amenaza,2014,11,28
+Amenaza,2014,12,44
+Amenaza,2015,1,115
+Amenaza,2015,2,175
+Amenaza,2015,3,149
+Amenaza,2015,4,158
+Amenaza,2015,5,140
+Amenaza,2015,6,131
+Amenaza,2015,7,154
+Amenaza,2015,8,178
+Amenaza,2015,9,143
+Amenaza,2015,10,136
+Amenaza,2015,11,114
+Amenaza,2015,12,117
+Amenaza,2016,1,107
+Amenaza,2016,2,85
+Amenaza,2016,3,37
+Amenaza,2016,4,5
+Amenaza,2016,5,28
+Amenaza,2016,6,111
+Amenaza,2016,7,106
+Amenaza,2016,8,113
+Amenaza,2016,9,98
+Amenaza,2016,10,46
+Amenaza,2016,11,28
+Amenaza,2016,12,35
+Amenaza,2017,1,95
+Amenaza,2017,2,97
+Amenaza,2017,3,99
+Amenaza,2017,4,92
+Amenaza,2017,5,134
+Amenaza,2017,6,100
+Amenaza,2017,7,97
+Amenaza,2017,8,135
+Amenaza,2017,9,162
+Amenaza,2017,10,90
+Amenaza,2017,11,93
+Amenaza,2017,12,22
+Amenaza,2018,1,146
+Amenaza,2018,2,179
+Amenaza,2018,3,195
+Amenaza,2018,4,188
+Amenaza,2018,5,191
+Amenaza,2018,6,185
+Amenaza,2018,7,252
+Amenaza,2018,8,322
+Amenaza,2018,9,235
+Amenaza,2018,10,215
+Amenaza,2018,11,161
+Amenaza,2018,12,122
+Amenaza,2019,1,59
+Amenaza,2019,2,36
+Delito sexual,2010,1,16
+Delito sexual,2010,2,11
+Delito sexual,2010,3,17
+Delito sexual,2010,4,13
+Delito sexual,2010,5,14
+Delito sexual,2010,6,8
+Delito sexual,2010,7,10
+Delito sexual,2010,8,18
+Delito sexual,2010,9,10
+Delito sexual,2010,10,9
+Delito sexual,2010,11,12
+Delito sexual,2010,12,9
+Delito sexual,2011,1,16
+Delito sexual,2011,2,16
+Delito sexual,2011,3,17
+Delito sexual,2011,4,28
+Delito sexual,2011,5,20
+Delito sexual,2011,6,15
+Delito sexual,2011,7,30
+Delito sexual,2011,8,23
+Delito sexual,2011,9,31
+Delito sexual,2011,10,27
+Delito sexual,2011,11,11
+Delito sexual,2011,12,14
+Delito sexual,2012,1,28
+Delito sexual,2012,2,29
+Delito sexual,2012,3,16
+Delito sexual,2012,4,19
+Delito sexual,2012,5,30
+Delito sexual,2012,6,14
+Delito sexual,2012,7,11
+Delito sexual,2012,8,11
+Delito sexual,2012,9,17
+Delito sexual,2012,10,7
+Delito sexual,2012,11,12
+Delito sexual,2012,12,8
+Delito sexual,2013,1,28
+Delito sexual,2013,2,28
+Delito sexual,2013,3,16
+Delito sexual,2013,4,14
+Delito sexual,2013,5,32
+Delito sexual,2013,6,32
+Delito sexual,2013,7,35
+Delito sexual,2013,8,35
+Delito sexual,2013,9,30
+Delito sexual,2013,10,38
+Delito sexual,2013,11,14
+Delito sexual,2013,12,11
+Delito sexual,2014,1,38
+Delito sexual,2014,2,23
+Delito sexual,2014,3,22
+Delito sexual,2014,4,42
+Delito sexual,2014,5,46
+Delito sexual,2014,6,24
+Delito sexual,2014,7,13
+Delito sexual,2014,8,11
+Delito sexual,2014,9,35
+Delito sexual,2014,10,19
+Delito sexual,2014,11,20
+Delito sexual,2014,12,20
+Delito sexual,2015,1,41
+Delito sexual,2015,2,52
+Delito sexual,2015,3,26
+Delito sexual,2015,4,52
+Delito sexual,2015,5,64
+Delito sexual,2015,6,37
+Delito sexual,2015,7,43
+Delito sexual,2015,8,50
+Delito sexual,2015,9,70
+Delito sexual,2015,10,77
+Delito sexual,2015,11,50
+Delito sexual,2015,12,38
+Delito sexual,2016,1,50
+Delito sexual,2016,2,54
+Delito sexual,2016,3,34
+Delito sexual,2016,4,50
+Delito sexual,2016,5,50
+Delito sexual,2016,6,54
+Delito sexual,2016,7,55
+Delito sexual,2016,8,49
+Delito sexual,2016,9,38
+Delito sexual,2016,10,66
+Delito sexual,2016,11,50
+Delito sexual,2016,12,39
+Delito sexual,2017,1,29
+Delito sexual,2017,2,48
+Delito sexual,2017,3,50
+Delito sexual,2017,4,34
+Delito sexual,2017,5,65
+Delito sexual,2017,6,82
+Delito sexual,2017,7,58
+Delito sexual,2017,8,53
+Delito sexual,2017,9,66
+Delito sexual,2017,10,45
+Delito sexual,2017,11,39
+Delito sexual,2017,12,32
+Delito sexual,2018,1,69
+Delito sexual,2018,2,47
+Delito sexual,2018,3,77
+Delito sexual,2018,4,71
+Delito sexual,2018,5,55
+Delito sexual,2018,6,60
+Delito sexual,2018,7,58
+Delito sexual,2018,8,43
+Delito sexual,2018,9,57
+Delito sexual,2018,10,21
+Delito sexual,2019,1,43
+Delito sexual,2019,2,24
+Delito sexual,2019,3,5
+Delito sexual,2019,4,1
+Delito sexual,2019,5,3
+Delito sexual,2019,6,2
+Delito sexual,2019,7,2
+Delito sexual,2019,8,5
+Delito sexual,2019,9,3
+Delito sexual,2019,10,1
+Delito sexual,2019,11,2
+Homicidio,2010,1,110
+Homicidio,2010,2,105
+Homicidio,2010,3,120
+Homicidio,2010,4,107
+Homicidio,2010,5,110
+Homicidio,2010,6,115
+Homicidio,2010,7,116
+Homicidio,2010,8,116
+Homicidio,2010,9,112
+Homicidio,2010,10,130
+Homicidio,2010,11,135
+Homicidio,2010,12,103
+Homicidio,2011,1,132
+Homicidio,2011,2,125
+Homicidio,2011,3,120
+Homicidio,2011,4,138
+Homicidio,2011,5,167
+Homicidio,2011,6,111
+Homicidio,2011,7,103
+Homicidio,2011,8,125
+Homicidio,2011,9,134
+Homicidio,2011,10,113
+Homicidio,2011,11,97
+Homicidio,2011,12,167
+Homicidio,2012,1,121
+Homicidio,2012,2,85
+Homicidio,2012,3,141
+Homicidio,2012,4,111
+Homicidio,2012,5,135
+Homicidio,2012,6,108
+Homicidio,2012,7,139
+Homicidio,2012,8,135
+Homicidio,2012,9,147
+Homicidio,2012,10,109
+Homicidio,2012,11,138
+Homicidio,2012,12,197
+Homicidio,2013,1,153
+Homicidio,2013,2,113
+Homicidio,2013,3,135
+Homicidio,2013,4,127
+Homicidio,2013,5,151
+Homicidio,2013,6,176
+Homicidio,2013,7,144
+Homicidio,2013,8,151
+Homicidio,2013,9,156
+Homicidio,2013,10,137
+Homicidio,2013,11,113
+Homicidio,2013,12,129
+Homicidio,2014,1,98
+Homicidio,2014,2,110
+Homicidio,2014,3,119
+Homicidio,2014,4,101
+Homicidio,2014,5,92
+Homicidio,2014,6,110
+Homicidio,2014,7,109
+Homicidio,2014,8,93
+Homicidio,2014,9,120
+Homicidio,2014,10,113
+Homicidio,2014,11,127
+Homicidio,2014,12,142
+Homicidio,2015,1,113
+Homicidio,2015,2,68
+Homicidio,2015,3,84
+Homicidio,2015,4,103
+Homicidio,2015,5,101
+Homicidio,2015,6,110
+Homicidio,2015,7,107
+Homicidio,2015,8,78
+Homicidio,2015,9,83
+Homicidio,2015,10,98
+Homicidio,2015,11,83
+Homicidio,2015,12,154
+Homicidio,2016,1,119
+Homicidio,2016,2,93
+Homicidio,2016,3,89
+Homicidio,2016,4,101
+Homicidio,2016,5,96
+Homicidio,2016,6,99
+Homicidio,2016,7,85
+Homicidio,2016,8,90
+Homicidio,2016,9,86
+Homicidio,2016,10,85
+Homicidio,2016,11,82
+Homicidio,2016,12,89
+Homicidio,2017,1,95
+Homicidio,2017,2,78
+Homicidio,2017,3,83
+Homicidio,2017,4,78
+Homicidio,2017,5,87
+Homicidio,2017,6,89
+Homicidio,2017,7,102
+Homicidio,2017,8,74
+Homicidio,2017,9,67
+Homicidio,2017,10,98
+Homicidio,2017,11,77
+Homicidio,2017,12,128
+Homicidio,2018,1,92
+Homicidio,2018,2,73
+Homicidio,2018,3,110
+Homicidio,2018,4,103
+Homicidio,2018,5,81
+Homicidio,2018,6,70
+Homicidio,2018,7,82
+Homicidio,2018,8,86
+Homicidio,2018,9,70
+Homicidio,2018,10,69
+Homicidio,2018,11,83
+Homicidio,2018,12,97
+Homicidio,2019,1,26
+Homicidio,2019,2,38
+Hurto persona,2010,1,446
+Hurto persona,2010,2,492
+Hurto persona,2010,3,523
+Hurto persona,2010,4,465
+Hurto persona,2010,5,486
+Hurto persona,2010,6,445
+Hurto persona,2010,7,502
+Hurto persona,2010,8,480
+Hurto persona,2010,9,513
+Hurto persona,2010,10,460
+Hurto persona,2010,11,453
+Hurto persona,2010,12,406
+Hurto persona,2011,1,432
+Hurto persona,2011,2,476
+Hurto persona,2011,3,614
+Hurto persona,2011,4,548
+Hurto persona,2011,5,628
+Hurto persona,2011,6,546
+Hurto persona,2011,7,481
+Hurto persona,2011,8,620
+Hurto persona,2011,9,551
+Hurto persona,2011,10,646
+Hurto persona,2011,11,491
+Hurto persona,2011,12,528
+Hurto persona,2012,1,498
+Hurto persona,2012,2,584
+Hurto persona,2012,3,582
+Hurto persona,2012,4,513
+Hurto persona,2012,5,549
+Hurto persona,2012,6,465
+Hurto persona,2012,7,510
+Hurto persona,2012,8,539
+Hurto persona,2012,9,589
+Hurto persona,2012,10,544
+Hurto persona,2012,11,457
+Hurto persona,2012,12,525
+Hurto persona,2013,1,581
+Hurto persona,2013,2,712
+Hurto persona,2013,3,716
+Hurto persona,2013,4,737
+Hurto persona,2013,5,679
+Hurto persona,2013,6,683
+Hurto persona,2013,7,684
+Hurto persona,2013,8,640
+Hurto persona,2013,9,717
+Hurto persona,2013,10,747
+Hurto persona,2013,11,570
+Hurto persona,2013,12,547
+Hurto persona,2014,1,504
+Hurto persona,2014,2,632
+Hurto persona,2014,3,737
+Hurto persona,2014,4,698
+Hurto persona,2014,5,835
+Hurto persona,2014,6,594
+Hurto persona,2014,7,663
+Hurto persona,2014,8,745
+Hurto persona,2014,9,656
+Hurto persona,2014,10,661
+Hurto persona,2014,11,617
+Hurto persona,2014,12,621
+Hurto persona,2015,1,644
+Hurto persona,2015,2,609
+Hurto persona,2015,3,608
+Hurto persona,2015,4,645
+Hurto persona,2015,5,637
+Hurto persona,2015,6,538
+Hurto persona,2015,7,538
+Hurto persona,2015,8,563
+Hurto persona,2015,9,641
+Hurto persona,2015,10,689
+Hurto persona,2015,11,683
+Hurto persona,2015,12,672
+Hurto persona,2016,1,647
+Hurto persona,2016,2,784
+Hurto persona,2016,3,750
+Hurto persona,2016,4,717
+Hurto persona,2016,5,734
+Hurto persona,2016,6,722
+Hurto persona,2016,7,705
+Hurto persona,2016,8,684
+Hurto persona,2016,9,831
+Hurto persona,2016,10,871
+Hurto persona,2016,11,758
+Hurto persona,2016,12,849
+Hurto persona,2017,1,831
+Hurto persona,2017,2,860
+Hurto persona,2017,3,948
+Hurto persona,2017,4,856
+Hurto persona,2017,5,981
+Hurto persona,2017,6,918
+Hurto persona,2017,7,922
+Hurto persona,2017,8,1222
+Hurto persona,2017,9,1173
+Hurto persona,2017,10,1171
+Hurto persona,2017,11,1107
+Hurto persona,2017,12,1369
+Hurto persona,2018,1,1212
+Hurto persona,2018,2,1109
+Hurto persona,2018,3,1060
+Hurto persona,2018,4,1230
+Hurto persona,2018,5,1250
+Hurto persona,2018,6,1150
+Hurto persona,2018,7,1130
+Hurto persona,2018,8,1323
+Hurto persona,2018,9,1246
+Hurto persona,2018,10,1220
+Hurto persona,2018,11,1199
+Hurto persona,2018,12,1185
+Hurto persona,2019,1,898
+Hurto persona,2019,2,782
+Hurto persona,2019,3,75
+Hurto persona,2019,4,71
+Hurto persona,2019,5,96
+Hurto persona,2019,6,78
+Hurto persona,2019,7,61
+Hurto persona,2019,8,79
+Hurto persona,2019,9,79
+Hurto persona,2019,10,54
+Hurto persona,2019,11,89
+Hurto persona,2019,12,94
+Lesiones personales,2010,1,306
+Lesiones personales,2010,2,280
+Lesiones personales,2010,3,326
+Lesiones personales,2010,4,275
+Lesiones personales,2010,5,319
+Lesiones personales,2010,6,287
+Lesiones personales,2010,7,309
+Lesiones personales,2010,8,299
+Lesiones personales,2010,9,263
+Lesiones personales,2010,10,302
+Lesiones personales,2010,11,243
+Lesiones personales,2010,12,298
+Lesiones personales,2011,1,279
+Lesiones personales,2011,2,268
+Lesiones personales,2011,3,326
+Lesiones personales,2011,4,372
+Lesiones personales,2011,5,391
+Lesiones personales,2011,6,352
+Lesiones personales,2011,7,348
+Lesiones personales,2011,8,350
+Lesiones personales,2011,9,299
+Lesiones personales,2011,10,300
+Lesiones personales,2011,11,285
+Lesiones personales,2011,12,375
+Lesiones personales,2012,1,330
+Lesiones personales,2012,2,302
+Lesiones personales,2012,3,350
+Lesiones personales,2012,4,269
+Lesiones personales,2012,5,383
+Lesiones personales,2012,6,296
+Lesiones personales,2012,7,275
+Lesiones personales,2012,8,291
+Lesiones personales,2012,9,264
+Lesiones personales,2012,10,295
+Lesiones personales,2012,11,224
+Lesiones personales,2012,12,281
+Lesiones personales,2013,1,427
+Lesiones personales,2013,2,384
+Lesiones personales,2013,3,378
+Lesiones personales,2013,4,388
+Lesiones personales,2013,5,444
+Lesiones personales,2013,6,439
+Lesiones personales,2013,7,423
+Lesiones personales,2013,8,398
+Lesiones personales,2013,9,425
+Lesiones personales,2013,10,419
+Lesiones personales,2013,11,407
+Lesiones personales,2013,12,414
+Lesiones personales,2014,1,343
+Lesiones personales,2014,2,319
+Lesiones personales,2014,3,415
+Lesiones personales,2014,4,321
+Lesiones personales,2014,5,424
+Lesiones personales,2014,6,438
+Lesiones personales,2014,7,399
+Lesiones personales,2014,8,355
+Lesiones personales,2014,9,358
+Lesiones personales,2014,10,337
+Lesiones personales,2014,11,343
+Lesiones personales,2014,12,432
+Lesiones personales,2015,1,381
+Lesiones personales,2015,2,414
+Lesiones personales,2015,3,343
+Lesiones personales,2015,4,327
+Lesiones personales,2015,5,402
+Lesiones personales,2015,6,421
+Lesiones personales,2015,7,395
+Lesiones personales,2015,8,451
+Lesiones personales,2015,9,439
+Lesiones personales,2015,10,410
+Lesiones personales,2015,11,374
+Lesiones personales,2015,12,420
+Lesiones personales,2016,1,520
+Lesiones personales,2016,2,452
+Lesiones personales,2016,3,452
+Lesiones personales,2016,4,398
+Lesiones personales,2016,5,524
+Lesiones personales,2016,6,457
+Lesiones personales,2016,7,474
+Lesiones personales,2016,8,477
+Lesiones personales,2016,9,443
+Lesiones personales,2016,10,500
+Lesiones personales,2016,11,464
+Lesiones personales,2016,12,520
+Lesiones personales,2017,1,448
+Lesiones personales,2017,2,430
+Lesiones personales,2017,3,482
+Lesiones personales,2017,4,457
+Lesiones personales,2017,5,532
+Lesiones personales,2017,6,484
+Lesiones personales,2017,7,546
+Lesiones personales,2017,8,533
+Lesiones personales,2017,9,557
+Lesiones personales,2017,10,615
+Lesiones personales,2017,11,559
+Lesiones personales,2017,12,606
+Lesiones personales,2018,1,582
+Lesiones personales,2018,2,542
+Lesiones personales,2018,3,550
+Lesiones personales,2018,4,587
+Lesiones personales,2018,5,473
+Lesiones personales,2018,6,571
+Lesiones personales,2018,7,599
+Lesiones personales,2018,8,653
+Lesiones personales,2018,9,657
+Lesiones personales,2018,10,622
+Lesiones personales,2018,11,545
+Lesiones personales,2018,12,580
+Lesiones personales,2019,1,433
+Lesiones personales,2019,2,321
+Lesiones personales,2019,3,34
+Lesiones personales,2019,4,26
+Lesiones personales,2019,5,26
+Lesiones personales,2019,6,24
+Lesiones personales,2019,7,21
+Lesiones personales,2019,8,30
+Lesiones personales,2019,9,24
+Lesiones personales,2019,10,40
+Lesiones personales,2019,11,31
+Lesiones personales,2019,12,39
+Violencia intrafamiliar,2010,1,67
+Violencia intrafamiliar,2010,2,38
+Violencia intrafamiliar,2010,3,18
+Violencia intrafamiliar,2010,4,17
+Violencia intrafamiliar,2010,5,43
+Violencia intrafamiliar,2010,6,25
+Violencia intrafamiliar,2010,7,25
+Violencia intrafamiliar,2010,8,33
+Violencia intrafamiliar,2010,9,50
+Violencia intrafamiliar,2010,10,50
+Violencia intrafamiliar,2010,11,17
+Violencia intrafamiliar,2010,12,67
+Violencia intrafamiliar,2011,1,81
+Violencia intrafamiliar,2011,2,55
+Violencia intrafamiliar,2011,3,85
+Violencia intrafamiliar,2011,4,44
+Violencia intrafamiliar,2011,5,57
+Violencia intrafamiliar,2011,6,54
+Violencia intrafamiliar,2011,7,109
+Violencia intrafamiliar,2011,8,260
+Violencia intrafamiliar,2011,9,154
+Violencia intrafamiliar,2011,10,151
+Violencia intrafamiliar,2011,11,164
+Violencia intrafamiliar,2011,12,58
+Violencia intrafamiliar,2012,1,263
+Violencia intrafamiliar,2012,2,263
+Violencia intrafamiliar,2012,3,170
+Violencia intrafamiliar,2012,4,159
+Violencia intrafamiliar,2012,5,71
+Violencia intrafamiliar,2012,6,116
+Violencia intrafamiliar,2012,7,51
+Violencia intrafamiliar,2012,8,166
+Violencia intrafamiliar,2012,9,88
+Violencia intrafamiliar,2012,10,66
+Violencia intrafamiliar,2012,11,56
+Violencia intrafamiliar,2012,12,22
+Violencia intrafamiliar,2013,1,167
+Violencia intrafamiliar,2013,2,203
+Violencia intrafamiliar,2013,3,120
+Violencia intrafamiliar,2013,4,71
+Violencia intrafamiliar,2013,5,149
+Violencia intrafamiliar,2013,6,126
+Violencia intrafamiliar,2013,7,92
+Violencia intrafamiliar,2013,8,94
+Violencia intrafamiliar,2013,9,72
+Violencia intrafamiliar,2013,10,43
+Violencia intrafamiliar,2013,11,26
+Violencia intrafamiliar,2013,12,18
+Violencia intrafamiliar,2014,1,200
+Violencia intrafamiliar,2014,2,172
+Violencia intrafamiliar,2014,3,127
+Violencia intrafamiliar,2014,4,137
+Violencia intrafamiliar,2014,5,140
+Violencia intrafamiliar,2014,6,138
+Violencia intrafamiliar,2014,7,79
+Violencia intrafamiliar,2014,8,26
+Violencia intrafamiliar,2014,9,143
+Violencia intrafamiliar,2014,10,136
+Violencia intrafamiliar,2014,11,41
+Violencia intrafamiliar,2014,12,60
+Violencia intrafamiliar,2015,1,148
+Violencia intrafamiliar,2015,2,190
+Violencia intrafamiliar,2015,3,163
+Violencia intrafamiliar,2015,4,202
+Violencia intrafamiliar,2015,5,208
+Violencia intrafamiliar,2015,6,198
+Violencia intrafamiliar,2015,7,198
+Violencia intrafamiliar,2015,8,193
+Violencia intrafamiliar,2015,9,262
+Violencia intrafamiliar,2015,10,228
+Violencia intrafamiliar,2015,11,227
+Violencia intrafamiliar,2015,12,195
+Violencia intrafamiliar,2016,1,318
+Violencia intrafamiliar,2016,2,352
+Violencia intrafamiliar,2016,3,254
+Violencia intrafamiliar,2016,4,179
+Violencia intrafamiliar,2016,5,199
+Violencia intrafamiliar,2016,6,171
+Violencia intrafamiliar,2016,7,208
+Violencia intrafamiliar,2016,8,207
+Violencia intrafamiliar,2016,9,240
+Violencia intrafamiliar,2016,10,199
+Violencia intrafamiliar,2016,11,198
+Violencia intrafamiliar,2016,12,237
+Violencia intrafamiliar,2017,1,198
+Violencia intrafamiliar,2017,2,221
+Violencia intrafamiliar,2017,3,247
+Violencia intrafamiliar,2017,4,266
+Violencia intrafamiliar,2017,5,350
+Violencia intrafamiliar,2017,6,250
+Violencia intrafamiliar,2017,7,240
+Violencia intrafamiliar,2017,8,194
+Violencia intrafamiliar,2017,9,256
+Violencia intrafamiliar,2017,10,179
+Violencia intrafamiliar,2017,11,139
+Violencia intrafamiliar,2017,12,39
+Violencia intrafamiliar,2018,1,179
+Violencia intrafamiliar,2018,2,138
+Violencia intrafamiliar,2018,3,179
+Violencia intrafamiliar,2018,4,240
+Violencia intrafamiliar,2018,5,185
+Violencia intrafamiliar,2018,6,164
+Violencia intrafamiliar,2018,7,143
+Violencia intrafamiliar,2018,8,201
+Violencia intrafamiliar,2018,9,248
+Violencia intrafamiliar,2018,10,206
+Violencia intrafamiliar,2018,11,200
+Violencia intrafamiliar,2018,12,140
+Violencia intrafamiliar,2019,1,144
+Violencia intrafamiliar,2019,2,70
+Violencia intrafamiliar,2019,3,104
+Violencia intrafamiliar,2019,4,111
+Violencia intrafamiliar,2019,5,113
+Violencia intrafamiliar,2019,6,58
+Violencia intrafamiliar,2019,7,7
+Violencia intrafamiliar,2019,8,13
+Violencia intrafamiliar,2019,9,13
+Violencia intrafamiliar,2019,10,21
+Violencia intrafamiliar,2019,11,12
+Violencia intrafamiliar,2019,12,12
