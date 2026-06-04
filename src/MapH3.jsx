@@ -75,7 +75,7 @@ export default function MapH3({
 
   const { byComuna } = useComunaRisk(hour);
   const { data: cai } = useApiData(api.cai, CAI_STATIC, []); // CAI reales del API, fallback estático
-  const res = vizType === "barrio" ? 7 : 8;
+  const res = vizType === "barrio" ? 8 : 9;
   const fillOpacity = vizType === "heat" ? 0.72 : vizType === "barrio" ? 0.5 : 0.58;
   const selectedComuna = selectedZoneId ? COMUNA_BY_ZONE[selectedZoneId] : null;
 
