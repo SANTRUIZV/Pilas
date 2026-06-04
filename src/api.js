@@ -1,10 +1,16 @@
 // Cliente del API de Pilas (backend FastAPI).
 //
-// Base configurable con VITE_API_URL (ver .env). Si el backend no responde, los
-// componentes hacen fallback a los datos estáticos de data.js, así la app sigue
-// funcionando en modo "demo" sin backend.
+// Base configurable con VITE_API_URL (ver .env). En desarrollo, si no se define,
+// usa `http://localhost:8000` (backend local). En producción (cuando Vite hace el
+// build), si no se define, usa el backend desplegado en Render para que el sitio
+// funcione aunque la variable no se haya inyectado al build. Si el backend no
+// responde, los componentes hacen fallback a los datos estáticos de data.js, así
+// la app sigue funcionando en modo "demo" sin backend.
 
-const BASE = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
+const PROD_API = "https://pilas-api-1bkc.onrender.com";
+const DEV_API = "http://localhost:8000";
+const DEFAULT_API = import.meta.env.PROD ? PROD_API : DEV_API;
+const BASE = (import.meta.env.VITE_API_URL || DEFAULT_API).replace(/\/$/, "");
 
 async function get(path, { timeout = 6000 } = {}) {
   const ctrl = new AbortController();
