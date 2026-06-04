@@ -9,7 +9,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { polygonToCells, cellToBoundary, cellToLatLng, latLngToCell } from "h3-js";
 import { ZONES, CAI as CAI_STATIC } from "./data.js";
-import { COMUNAS, CALI_BBOX, CALI_CENTER, CITY_CLIP_KM, nearestComuna } from "./comunas.js";
+import { COMUNAS, CALI_URBAN, CALI_CENTER, nearestComuna } from "./comunas.js";
 import { useComunaRisk, useApiData } from "./hooks.js";
 import { api } from "./api.js";
 
@@ -79,14 +79,14 @@ export default function MapH3({
   const fillOpacity = vizType === "heat" ? 0.72 : vizType === "barrio" ? 0.5 : 0.58;
   const selectedComuna = selectedZoneId ? COMUNA_BY_ZONE[selectedZoneId] : null;
 
-  // Celdas H3 candidatas para la resolución actual, ya recortadas a la ciudad
-  // y con su comuna asignada (Voronoi).
+  // Celdas H3 dentro del perímetro urbano REAL de Cali (CALI_URBAN, OSM), con su
+  // comuna asignada por centroide más cercano (Voronoi). La silueta de la ciudad
+  // la define el polígono, no un recorte por distancia.
   const cells = useMemo(() => {
     const byCell = new Map(); // h3 index → nº de comuna
-    for (const h of polygonToCells([CALI_BBOX], res)) { // loops en [lat, lon]
+    for (const h of polygonToCells([CALI_URBAN], res)) { // loops en [lat, lon]
       const [lat, lon] = cellToLatLng(h);
-      const { comuna, dist } = nearestComuna(lat, lon);
-      if (dist <= CITY_CLIP_KM) byCell.set(h, comuna.n);
+      byCell.set(h, nearestComuna(lat, lon).comuna.n);
     }
     // Garantiza al menos un hexágono por comuna (la celda de su centroide).
     for (const c of COMUNAS) {
