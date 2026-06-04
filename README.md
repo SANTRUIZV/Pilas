@@ -19,7 +19,10 @@ Ambas comparten el mismo mapa (`MapView`), datos (`data.js`) y sistema de diseñ
 
 ### App ciudadana (`index.html`)
 
-- **Mapa de riesgo** de Cali con hex grid, mapa de calor o polígonos por barrio.
+- **Mapa de riesgo** sobre **OpenStreetMap** (Leaflet) con **grilla hexagonal H3
+  de Uber**: cada hexágono se asigna a su comuna (Voronoi sobre los centroides de
+  las **22 comunas de Cali**) y se colorea por el riesgo del modelo a la hora
+  seleccionada. La resolución H3 cambia con el selector (Hex/Calor/Barrios).
 - **Scrubber 0–23h** que recolorea el mapa según el patrón horario.
 - **Detalle de zona** — índice de riesgo, patrón 24h, top delitos, recomendaciones
   preventivas y servicios cercanos (CAI / hospital).
@@ -59,7 +62,9 @@ src/
   Panels.jsx        Paneles del rail ciudadano (zona, ruta, pulso, reportes)
   Tweaks.jsx        Panel de Ajustes (tema, audiencia, viz, paleta)
   Dashboard.jsx     Dashboard gubernamental (KPIs, series, tabla, alertas…)
-  MapView.jsx       Mapa SVG de Cali con grilla hexagonal, zoom y pan (compartido)
+  MapH3.jsx         Mapa OpenStreetMap (Leaflet) + hexágonos H3 (Uber) · compartido
+  comunas.js        Las 22 comunas de Cali (centroides, sector, riesgo base)
+  MapView.jsx       Mapa SVG anterior (hex propio) — legado, ya no se usa
   api.js            Cliente HTTP del backend (FastAPI)
   hooks.js          Hooks de integración: estado de conexión, mapa de riesgo, fetch
   data.js           Datos base de Cali (fallback cuando el backend no está)

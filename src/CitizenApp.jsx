@@ -1,10 +1,11 @@
 // Pilas — App ciudadana (mapa, rutas, pulso, reportes, modo turista).
 import React, { useState, useEffect } from "react";
-import MapView from "./MapView.jsx";
+import MapH3 from "./MapH3.jsx";
 import { ZONES, CAI, HOSPITALS, TOURISM, REPORTS, METRICS, riskClass, riskLabel, riskScore } from "./data.js";
 import { ZoneDetail, RoutePlanner, ReportsFeed, Trends } from "./Panels.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "./Tweaks.jsx";
-import { useApiStatus, useRiskMap } from "./hooks.js";
+import { useApiStatus, useRiskMap, useApiData } from "./hooks.js";
+import { api } from "./api.js";
 
 const TWEAK_DEFAULTS = {
   theme: "dark",
@@ -86,7 +87,7 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
   );
 }
 
-function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience }) {
+function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience, caiCount }) {
   const labels = audience === "tourist" ? {
     where: "Where are you", search: "Search neighborhood…", time: "Time of day",
     layers: "Layers", legend: "Risk level"
@@ -156,9 +157,9 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
             <input type="checkbox" checked={layers.cai} onChange={e => setLayers({ ...layers, cai: e.target.checked })} />
             <span className="pls-layer-box"></span>
             <span className="pls-layer-mark" style={{ color: "var(--pls-cool)" }}>CAI</span>
-            <span>{audience === "tourist" ? "Police stations" : "Estaciones CAI"}</span>
+            <span>{audience === "tourist" ? "Police units" : "CAI y estaciones"}</span>
             <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{CAI.length}</span>
+            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{caiCount}</span>
           </label>
           <label className="pls-layer">
             <input type="checkbox" checked={layers.hosp} onChange={e => setLayers({ ...layers, hosp: e.target.checked })} />
@@ -234,15 +235,12 @@ function Bar()  { return <svg width="11" height="11" viewBox="0 0 24 24" fill="c
 function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSelectedZoneId, hour, layers, palette, routeFrom, routeTo, audience, riskByZone }) {
   return (
     <div className="pls-mapwrap">
-      <MapView theme={theme} vizType={vizType}
+      <MapH3 theme={theme} vizType={vizType}
         selectedZoneId={selectedZoneId}
         onSelectZone={setSelectedZoneId}
         hour={hour}
         palette={palette}
         showCAI={layers.cai}
-        showHospitals={layers.hosp}
-        showTourism={layers.tourism}
-        riskByZone={riskByZone}
         routeFrom={routeFrom} routeTo={routeTo} />
       <div className="pls-map-chrome">
         <div className="pls-mode-toggle">
@@ -287,6 +285,7 @@ export default function App() {
 
   const status = useApiStatus();
   const riskByZone = useRiskMap(hour);
+  const { data: caiList } = useApiData(api.cai, CAI, []);   // CAI reales (fallback estático)
   // Resolver de riesgo: API para la hora cargada, fallback al cálculo local.
   const riskOf = (zone, h) =>
     h === hour && riskByZone && riskByZone[zone.id] != null ? riskByZone[zone.id] : riskScore(zone, h);
@@ -335,6 +334,7 @@ export default function App() {
           score={score}
           palette={t.palette}
           audience={t.audience}
+          caiCount={caiList.length}
         />
         <MapArea
           vizType={t.vizType} setVizType={(v) => setTweak("vizType", v)}

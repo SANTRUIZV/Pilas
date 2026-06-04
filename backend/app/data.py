@@ -53,7 +53,8 @@ CRIMES = [
     {"id": "violencia-intra","label": "Violencia intrafam.", "share": 0.08, "trend": 1},
 ]
 
-CAI = [
+# CAI sintéticos (respaldo si no están los datos reales ingeridos).
+_CAI_SYNTHETIC = [
     {"id": "cai-versalles",  "name": "CAI Versalles",   "lat": 3.464, "lon": -76.532},
     {"id": "cai-granada",    "name": "CAI Granada",     "lat": 3.460, "lon": -76.534},
     {"id": "cai-san-anto",   "name": "CAI San Antonio", "lat": 3.448, "lon": -76.540},
@@ -63,6 +64,91 @@ CAI = [
     {"id": "cai-siloe",      "name": "CAI Siloé",       "lat": 3.430, "lon": -76.554},
     {"id": "cai-el-caney",   "name": "CAI El Caney",    "lat": 3.396, "lon": -76.526},
 ]
+
+
+def _slug(s: str) -> str:
+    import re
+    import unicodedata
+    s = "".join(c for c in unicodedata.normalize("NFD", str(s)) if unicodedata.category(c) != "Mn")
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+
+def _unit_kind(name: str) -> str:
+    """Clasifica una unidad de Policía por su nombre."""
+    n = name.upper()
+    if "SUBESTACION" in n or "SUBESTACIÓN" in n:
+        return "Subestación"
+    if "ESTACION" in n or "ESTACIÓN" in n:
+        return "Estación"
+    if n.startswith("CAI") or " CAI" in n:
+        return "CAI"
+    return "Otro"
+
+
+def _load_real_cai() -> list[dict]:
+    """Unidades de Policía reales (CAI + estaciones + subestaciones) de
+    ml/datasets/cai_locations.csv, ingerido del Excel de ubicaciones de la
+    Policía (hoja «Hoja3»). Lista vacía si no existe el CSV."""
+    import csv
+    from .config import DATA_DIR
+
+    path = DATA_DIR / "cai_locations.csv"
+    if not path.exists():
+        return []
+    out: list[dict] = []
+    seen = set()
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            try:
+                lat, lon = float(row["lat"]), float(row["lon"])
+            except (KeyError, ValueError):
+                continue
+            name = (row.get("name") or "").strip()
+            cid = _slug(name) or f"unidad-{len(out)}"
+            if cid in seen:
+                cid = f"{cid}-{len(out)}"
+            seen.add(cid)
+            out.append({
+                "id": cid,
+                "name": name,
+                "kind": _unit_kind(name),
+                "lat": lat,
+                "lon": lon,
+                "phone": (row.get("phone") or "").strip(),
+                "address": (row.get("address") or "").strip(),
+            })
+    return out
+
+
+# CAI reales si están disponibles; si no, los sintéticos.
+CAI = _load_real_cai() or _CAI_SYNTHETIC
+
+
+def _load_cuadrantes() -> list[dict]:
+    """Directorio de cuadrantes de Cali (de ml/datasets/cuadrantes_cali.csv).
+
+    Proviene de la hoja «ORIGINAL» del Excel de la Policía. No tiene coordenadas:
+    es un listado consultable (estación, CAI, código, cuadrante, teléfono)."""
+    import csv
+    from .config import DATA_DIR
+
+    path = DATA_DIR / "cuadrantes_cali.csv"
+    if not path.exists():
+        return []
+    out: list[dict] = []
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            out.append({
+                "estacion": (row.get("estacion") or "").strip(),
+                "cai": (row.get("cai") or "").strip(),
+                "codigo": (row.get("codigo") or "").strip(),
+                "cuadrante": (row.get("cuadrante") or "").strip(),
+                "phone": (row.get("phone") or "").strip(),
+            })
+    return out
+
+
+CUADRANTES = _load_cuadrantes()
 
 HOSPITALS = [
     {"id": "h-valle",     "name": "HU del Valle",             "lat": 3.434, "lon": -76.531},
@@ -196,6 +282,12 @@ def comuna_number(zone: dict) -> int | None:
         return int(raw)
     except ValueError:
         return None
+
+
+def comuna_base_risk(c: int) -> int:
+    """Riesgo base representativo de una comuna (promedio de sus zonas; 45 por defecto)."""
+    risks = [z["baseRisk"] for z in ZONES if comuna_number(z) == c]
+    return round(sum(risks) / len(risks)) if risks else 45
 
 
 # ── Lookups ─────────────────────────────────────────────────────────────────

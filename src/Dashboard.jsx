@@ -1,6 +1,6 @@
 // Pilas Gov Dashboard — Secretaría de Seguridad
 import React, { useState, useMemo } from "react";
-import MapView from "./MapView.jsx";
+import MapH3 from "./MapH3.jsx";
 import { CRIMES, METRICS } from "./data.js";
 import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "./data-gov.js";
 import { useApiStatus, useApiData, useRiskMap } from "./hooks.js";
@@ -348,14 +348,43 @@ function PatrolsList() {
   );
 }
 
+// ── Directorio de cuadrantes (hoja ORIGINAL · sin mapa) ─────────────────
+function CuadrantesList() {
+  const { data: cuadrantes } = useApiData(api.cuadrantes, [], []);
+  const [q, setQ] = useState("");
+  const rows = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return cuadrantes;
+    return cuadrantes.filter(c =>
+      `${c.cai} ${c.estacion} ${c.cuadrante} ${c.phone} ${c.codigo}`.toLowerCase().includes(s));
+  }, [q, cuadrantes]);
+  return (
+    <div className="gov-cuad">
+      <input className="gov-cuad-search" value={q} onChange={e => setQ(e.target.value)}
+        placeholder="Buscar CAI, estación, cuadrante o teléfono…" />
+      <div className="gov-cuad-count">{rows.length} de {cuadrantes.length} cuadrantes</div>
+      <ul className="gov-cuad-list">
+        {rows.map((c, i) => (
+          <li key={c.codigo || i}>
+            <div className="gov-cuad-top">
+              <span className="gov-cuad-num">Cuadrante {c.cuadrante}</span>
+              {c.phone && <a className="gov-cuad-tel" href={`tel:${c.phone}`}>☎ {c.phone}</a>}
+            </div>
+            <div className="gov-cuad-meta">{c.cai || "—"} · {c.estacion}</div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // ── Map block (reuses MapView) ─────────────────────────────────────────
 function GovMap() {
-  const riskByZone = useRiskMap(19);   // riesgo real del modelo a las 19:00
   return (
     <div className="gov-map-block">
-      <MapView theme="dark" vizType="hex" hour={19}
+      <MapH3 theme="dark" vizType="hex" hour={19}
         palette={["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"]}
-        showCAI={true} showReports={true} riskByZone={riskByZone} />
+        showCAI={true} zoomPosition="topright" />
       <div className="gov-map-overlay">
         <div className="gov-map-overlay-eyebrow">Mapa operativo · ahora</div>
         <div className="gov-map-overlay-h">5 alertas activas</div>
@@ -413,11 +442,13 @@ export default function App() {
             </button>
             <button className={railTab === "patrols" ? "is-on" : ""} onClick={() => setRailTab("patrols")}>Patrullas</button>
             <button className={railTab === "feed" ? "is-on" : ""} onClick={() => setRailTab("feed")}>Actividad</button>
+            <button className={railTab === "cuad" ? "is-on" : ""} onClick={() => setRailTab("cuad")}>Cuadrantes</button>
           </div>
           <div className="gov-rail-body">
             {railTab === "alerts"  && <AlertsList />}
             {railTab === "patrols" && <PatrolsList />}
             {railTab === "feed"    && <FeedList />}
+            {railTab === "cuad"    && <CuadrantesList />}
           </div>
         </div>
       </div>

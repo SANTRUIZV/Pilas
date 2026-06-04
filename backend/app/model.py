@@ -7,6 +7,7 @@ que el API es funcional desde el primer `uvicorn` sin necesidad de entrenar.
 from __future__ import annotations
 
 import json
+import threading
 from datetime import datetime
 
 from . import config, data, features
@@ -19,27 +20,35 @@ class RiskModel:
         self._risk_hi: float = 1.0
         self.meta: dict = {}
         self._tried_load = False
+        self._lock = threading.Lock()
 
-    # ── Carga perezosa del artefacto ────────────────────────────────────────
+    # ── Carga del artefacto (segura entre hilos) ────────────────────────────
     def load(self) -> bool:
-        """Intenta cargar el modelo entrenado. Devuelve True si quedó disponible."""
-        self._tried_load = True
-        if not config.MODEL_PATH.exists():
-            return False
-        try:
-            import xgboost as xgb  # import perezoso: solo si hay artefacto
-        except ImportError:
-            return False
-        booster = xgb.Booster()
-        booster.load_model(str(config.MODEL_PATH))
-        self._booster = booster
-        if config.METRICS_PATH.exists():
-            self.meta = json.loads(config.METRICS_PATH.read_text(encoding="utf-8"))
-            self._risk_lo = float(self.meta.get("risk_lo", 0.0))
-            self._risk_hi = float(self.meta.get("risk_hi", self.meta.get("risk_scale", 1.0)))
-            if self._risk_hi - self._risk_lo < 1e-6:
-                self._risk_hi = self._risk_lo + 1.0
-        return True
+        """Carga el modelo entrenado una sola vez. Devuelve True si quedó disponible.
+
+        Conviene invocarla al arrancar (ver lifespan en main.py) para evitar la
+        latencia del primer request y cualquier carrera de carga concurrente.
+        """
+        with self._lock:
+            if self._tried_load:
+                return self._booster is not None
+            self._tried_load = True
+            if not config.MODEL_PATH.exists():
+                return False
+            try:
+                import xgboost as xgb  # import perezoso: solo si hay artefacto
+            except ImportError:
+                return False
+            booster = xgb.Booster()
+            booster.load_model(str(config.MODEL_PATH))
+            if config.METRICS_PATH.exists():
+                self.meta = json.loads(config.METRICS_PATH.read_text(encoding="utf-8"))
+                self._risk_lo = float(self.meta.get("risk_lo", 0.0))
+                self._risk_hi = float(self.meta.get("risk_hi", self.meta.get("risk_scale", 1.0)))
+                if self._risk_hi - self._risk_lo < 1e-6:
+                    self._risk_hi = self._risk_lo + 1.0
+            self._booster = booster  # se asigna al final: indica "listo"
+            return True
 
     @property
     def is_loaded(self) -> bool:

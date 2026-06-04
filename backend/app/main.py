@@ -9,6 +9,7 @@ Docs interactivas: http://localhost:8000/docs
 """
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Query
@@ -20,10 +21,21 @@ from .schemas import (
     CrimeShare, Health, HourRisk, RiskOut, Service, ZoneDetailOut, ZoneOut,
 )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Carga el modelo al arrancar: evita la latencia del primer request y
+    # cualquier carrera de carga concurrente.
+    loaded = risk_model.load()
+    print(f"[Pilas] Modelo {'cargado (XGBoost)' if loaded else 'no disponible → fallback analítico'}")
+    yield
+
+
 app = FastAPI(
     title="Pilas API",
     version="0.1.0",
     description="Análisis predictivo de seguridad ciudadana · Cali (MinTIC · Datos al Ecosistema 2026)",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -74,6 +86,18 @@ def risk(
     h = datetime.now().hour if hour is None else hour
     s = risk_model.score(zone, h)
     return RiskOut(zone_id=zone["id"], zone_name=zone["name"], hour=h, **s)
+
+
+@app.get("/risk/comunas", tags=["riesgo"])
+def risk_comunas(hour: int = Query(default=None, ge=0, le=23)) -> list[dict]:
+    """Riesgo 0–100 del modelo para las 22 comunas de Cali (para el mapa H3)."""
+    h = datetime.now().hour if hour is None else hour
+    out = []
+    for c in range(1, 23):
+        pseudo = {"id": f"comuna-{c}", "comuna": f"Comuna {c}", "baseRisk": data.comuna_base_risk(c)}
+        s = risk_model.score(pseudo, h)
+        out.append({"comuna": c, "hour": h, **s})
+    return out
 
 
 @app.get("/risk/by-point", response_model=RiskOut, tags=["riesgo"])
@@ -151,6 +175,12 @@ def tourism() -> list[dict]:
 @app.get("/reports", tags=["catálogos"])
 def reports() -> list[dict]:
     return data.REPORTS
+
+
+@app.get("/cuadrantes", tags=["catálogos"])
+def cuadrantes() -> list[dict]:
+    """Directorio de cuadrantes de Policía de Cali (sin coordenadas)."""
+    return data.CUADRANTES
 
 
 # ── Gobierno ─────────────────────────────────────────────────────────────────

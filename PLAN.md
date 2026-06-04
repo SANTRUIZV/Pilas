@@ -208,7 +208,9 @@ viabilidad técnica y potencial de escalabilidad nacional.
    (reemplazar `data.js` / `data-gov.js`).
 4. Validar con usuarios (ciudadanos, turista, funcionario) y preparar la demo
    para el concurso del MinTIC.
-5. (Opcional) Migrar el mapa SVG a Mapbox GL / deck.gl para escala real.
+5. ✓ Mapa real: **OpenStreetMap (Leaflet) + hexágonos H3 (Uber)** sobre las 22
+   comunas de Cali, coloreado por el modelo (`src/MapH3.jsx`). _(Pendiente
+   opcional: límites GeoJSON reales de comunas para un choropleth de polígonos.)_
 
 ---
 

@@ -34,8 +34,11 @@ export const api = {
   zones: (hour) => get(`/zones${q({ hour })}`),
   zoneDetail: (id, hour) => get(`/zones/${encodeURIComponent(id)}${q({ hour })}`),
   risk: (zoneId, hour) => get(`/risk${q({ zone_id: zoneId, hour })}`),
+  riskComunas: (hour) => get(`/risk/comunas${q({ hour })}`),
   crimes: () => get("/crimes"),
+  cai: () => get("/cai"),
   reports: () => get("/reports"),
+  cuadrantes: () => get("/cuadrantes"),
   // Gobierno
   govKpi: () => get("/gov/kpi"),
   govAlerts: () => get("/gov/alerts"),

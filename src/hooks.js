@@ -1,6 +1,34 @@
 // Hooks de integración con el API, con fallback a datos estáticos.
 import { useEffect, useState } from "react";
 import { api } from "./api.js";
+import { COMUNAS } from "./comunas.js";
+import { HOURS } from "./data.js";
+
+// Riesgo por comuna {n: risk} para una hora. Usa el modelo (/risk/comunas); si
+// el backend no responde, cae a un cálculo analítico local (baseRisk × hora).
+export function useComunaRisk(hour) {
+  const [state, setState] = useState(() => ({ byComuna: localComunaRisk(hour), live: false }));
+  useEffect(() => {
+    let alive = true;
+    api.riskComunas(hour)
+      .then(rows => {
+        if (!alive) return;
+        const m = {};
+        rows.forEach(r => { m[r.comuna] = r.risk; });
+        setState({ byComuna: m, live: true });
+      })
+      .catch(() => { if (alive) setState({ byComuna: localComunaRisk(hour), live: false }); });
+    return () => { alive = false; };
+  }, [hour]);
+  return state;
+}
+
+function localComunaRisk(hour) {
+  const mult = HOURS[hour] ?? 1;
+  const m = {};
+  COMUNAS.forEach(c => { m[c.n] = Math.min(100, Math.round(c.baseRisk * mult)); });
+  return m;
+}
 
 // Estado de conexión al backend: { online, source } donde source es
 // "model" | "analytic" | null. Reintenta cada 20 s.
