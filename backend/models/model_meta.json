@@ -1,0 +1,46 @@
+{
+  "trained_at": "2026-06-04T14:06:10",
+  "source": "Bases de datos · TAB ALCALDÍA 09-19 (Cali)",
+  "n_cells": 443520,
+  "years": [
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019
+  ],
+  "test_year": 2018,
+  "features": [
+    "comuna",
+    "hour_sin",
+    "hour_cos",
+    "weekday",
+    "is_weekend",
+    "month_sin",
+    "month_cos"
+  ],
+  "best_iteration": 792,
+  "risk_lo": 0.07178995013237,
+  "risk_hi": 1.0390040874481201,
+  "high_risk_threshold": 1.0,
+  "metrics": {
+    "mae": 0.6208,
+    "rmse": 0.9528,
+    "roc_auc": 0.7308,
+    "precision_at_4435": 0.4095
+  },
+  "feature_importance": {
+    "comuna": 18.020618438720703,
+    "hour_sin": 19.4771671295166,
+    "hour_cos": 15.455510139465332,
+    "weekday": 5.339897632598877,
+    "is_weekend": 7.239986896514893,
+    "month_sin": 1.5695521831512451,
+    "month_cos": 1.569934368133545
+  }
+}

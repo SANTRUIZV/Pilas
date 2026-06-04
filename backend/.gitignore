@@ -8,6 +8,7 @@ env/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# Artefactos generados
-ml/datasets/
-models/*.json
+# Artefactos generados — se VERSIONAN para deploy sin re-ingestar/re-entrenar.
+# Para regenerarlos desde los .xlsx en `../Bases de datos/`:
+#   python -m ml.ingest    (Excel → CSVs limpios)
+#   python -m ml.train     (CSVs → modelo XGBoost)
