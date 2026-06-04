@@ -1,0 +1,29 @@
+# Render Blueprint para el backend de Pilas.
+#
+# Despliegue con un clic: en https://dashboard.render.com → New → Blueprint, apuntar
+# al repo. Render lee este archivo y crea el servicio. Tras la primera ejecución,
+# anota la URL pública (p. ej. https://pilas-api.onrender.com) y configúrala como
+# `VITE_API_URL` en el build del frontend.
+#
+# Los artefactos del modelo (`backend/models/*.json`) y los CSVs
+# (`backend/ml/datasets/`) ya están versionados, así que el build NO necesita
+# correr `ml.ingest` ni `ml.train` — solo instala dependencias y arranca uvicorn.
+# Para regenerarlos: localmente `python -m ml.ingest && python -m ml.train`.
+
+services:
+  - type: web
+    name: pilas-api
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.10
+      - key: PILAS_CORS_ORIGINS
+        # Orígenes permitidos para CORS. Ajusta con el dominio real del frontend
+        # cuando lo despliegues (separados por coma).
+        value: "http://localhost:5173,http://localhost:4173"

@@ -113,8 +113,26 @@ backend/
   requirements.txt
 ```
 
-## Siguiente paso: conectar el frontend
+## Conectar el frontend
 
-El frontend (`../src`) aún lee `data.js` estático. Para usar este API:
-reemplazar esas lecturas por `fetch` a `http://localhost:8000` (los esquemas ya
-coinciden con la forma que consume la UI). CORS ya permite el origen de Vite.
+El frontend (`../src`) consume este API vía `src/api.js` con `VITE_API_URL`. En
+desarrollo apunta a `http://localhost:8000`; en producción se configura por env.
+Si el backend está caído, el frontend cae a los datos estáticos de `src/data.js`
+(55 CAIs, 22 comunas, etc.) y la app sigue funcionando como demo.
+
+## Deploy en Render
+
+El blueprint está en `../render.yaml`. En https://dashboard.render.com → **New →
+Blueprint** y apuntar al repo: Render crea el servicio automáticamente. El
+modelo entrenado y los CSVs ya están versionados, así que el build solo instala
+dependencias y arranca uvicorn (≈ 2-3 min en el plan free).
+
+Después del primer deploy:
+
+1. Copiar la URL pública (p. ej. `https://pilas-api.onrender.com`).
+2. Ajustar `PILAS_CORS_ORIGINS` en Render con el dominio del frontend.
+3. En el frontend, setear `VITE_API_URL=https://pilas-api.onrender.com` y rebuild.
+
+> **Nota plan free:** Render duerme el servicio tras 15 min sin tráfico.
+> El primer request tras dormir tarda ~30 s en responder; los siguientes son
+> instantáneos. Para producción real, usar un plan pago o un cron de ping.
