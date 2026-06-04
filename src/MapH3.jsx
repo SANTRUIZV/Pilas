@@ -7,9 +7,9 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { polygonToCells, cellToBoundary, cellToLatLng, latLngToCell } from "h3-js";
+import { polygonToCells, cellToBoundary, latLngToCell } from "h3-js";
 import { ZONES, CAI as CAI_STATIC } from "./data.js";
-import { COMUNAS, CALI_URBAN, CALI_CENTER, nearestComuna } from "./comunas.js";
+import { COMUNAS, COMUNA_POLYS, CALI_CENTER } from "./comunas.js";
 import { useComunaRisk, useApiData } from "./hooks.js";
 import { api } from "./api.js";
 
@@ -79,16 +79,15 @@ export default function MapH3({
   const fillOpacity = vizType === "heat" ? 0.72 : vizType === "barrio" ? 0.5 : 0.58;
   const selectedComuna = selectedZoneId ? COMUNA_BY_ZONE[selectedZoneId] : null;
 
-  // Celdas H3 dentro del perímetro urbano REAL de Cali (CALI_URBAN, OSM), con su
-  // comuna asignada por centroide más cercano (Voronoi). La silueta de la ciudad
-  // la define el polígono, no un recorte por distancia.
+  // Celdas H3 teseladas por el límite REAL de cada comuna (COMUNA_POLYS, IDESC):
+  // cada hexágono se asigna a la comuna cuyo polígono contiene su centro. La unión
+  // de las comunas dibuja la silueta urbana real de la ciudad.
   const cells = useMemo(() => {
     const byCell = new Map(); // h3 index → nº de comuna
-    for (const h of polygonToCells([CALI_URBAN], res)) { // loops en [lat, lon]
-      const [lat, lon] = cellToLatLng(h);
-      byCell.set(h, nearestComuna(lat, lon).comuna.n);
+    for (const { n, poly } of COMUNA_POLYS) {
+      for (const h of polygonToCells([poly], res)) byCell.set(h, n); // loops en [lat, lon]
     }
-    // Garantiza al menos un hexágono por comuna (la celda de su centroide).
+    // Garantiza al menos un hexágono por comuna (la celda de su punto-etiqueta).
     for (const c of COMUNAS) {
       const h = latLngToCell(c.lat, c.lon, res);
       if (!byCell.has(h)) byCell.set(h, c.n);
