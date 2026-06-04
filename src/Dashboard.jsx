@@ -96,34 +96,39 @@ function KPI_Card({ label, value, suffix, delta, deltaSuffix = "%", good = "down
   );
 }
 
+// Helpers para no crashear si el backend devuelve campos faltantes.
+const num = (v, d = 0) => (typeof v === "number" && !Number.isNaN(v) ? v : d);
+const arr = (v) => (Array.isArray(v) && v.length ? v : null);
+
 function KPIRow() {
   const { data: k } = useApiData(api.govKpi, KPI, []);
-  // Sparks: del backend cuando hay (datos reales del histórico); si no, de
-  // data-gov.js como respaldo.
-  const sparkInc = k?.sparks?.incidents || DAILY["hurto-personas"].slice(-14);
-  const sparkSec = k?.sparks?.secondary || DAILY["hurto-celular"].slice(-14);
-  const sparkAcc = k?.sparks?.accuracy  || DRIFT.slice(-14).map(d => ({ v: d.accuracy * 100 }));
-  const secondaryLabel = k?.secondaryLabel || "Hurto celular · 7d";
-  const secondaryValue = k?.secondary7d ?? 165;
-  const secondaryDelta = k?.secondaryDelta ?? +5.1;
+  // Sparks: del backend cuando hay (datos reales del histórico); si no,
+  // generados desde el DAILY de respaldo. Defensivo: si un id no existe en
+  // DAILY (por cambios de taxonomía), usar [].
+  const sparkInc = arr(k?.sparks?.incidents) || (DAILY["hurto-personas"] || []).slice(-14);
+  const sparkSec = arr(k?.sparks?.secondary) || (DAILY["homicidio"] || []).slice(-14);
+  const sparkAcc = arr(k?.sparks?.accuracy)  || DRIFT.slice(-14).map(d => ({ v: d.accuracy * 100 }));
+  const secondaryLabel = k?.secondaryLabel || "Homicidios · 7d";
+  const secondaryValue = num(k?.secondary7d, 0);
+  const secondaryDelta = num(k?.secondaryDelta, 0);
 
   return (
     <div className="gov-kpis">
-      <KPI_Card label="Incidentes · 7 días"
-        value={nfmt(k.incidents7d)} delta={k.incidentsDelta} good="down"
+      <KPI_Card label="Hurto a personas · 7d"
+        value={nfmt(num(k?.incidents7d))} delta={num(k?.incidentsDelta)} good="down"
         spark={sparkInc} sparkColor="var(--pls-accent)" />
       <KPI_Card label={secondaryLabel}
         value={nfmt(secondaryValue)} delta={secondaryDelta} good="down"
         spark={sparkSec} sparkColor="var(--pls-warn)" />
-      <KPI_Card label="Precisión modelo"
-        value={k.predAccuracy.toFixed(1)} suffix="%" delta={k.accuracyDelta} good="up"
+      <KPI_Card label="Precisión modelo (ROC-AUC)"
+        value={num(k?.predAccuracy, 73).toFixed(1)} suffix="%" delta={num(k?.accuracyDelta)} good="up"
         spark={sparkAcc} sparkColor="var(--pls-cool)" />
       <KPI_Card label="Alertas activas"
-        value={k.activeAlerts} delta={k.alertsDelta} good="down" deltaSuffix="" />
-      <KPI_Card label="Patrullas asignadas"
-        value={k.patrolsDeployed} delta={k.patrolsDelta} good="up" deltaSuffix="" />
+        value={num(k?.activeAlerts)} delta={num(k?.alertsDelta)} good="down" deltaSuffix="" />
+      <KPI_Card label="Patrullas sugeridas"
+        value={num(k?.patrolsDeployed)} delta={num(k?.patrolsDelta)} good="up" deltaSuffix="" />
       <KPI_Card label="Tiempo de respuesta"
-        value={k.responseTime.toFixed(1)} suffix="min" delta={k.responseDelta} good="down" />
+        value={num(k?.responseTime, 8.4).toFixed(1)} suffix="min" delta={num(k?.responseDelta)} good="down" />
     </div>
   );
 }
@@ -272,9 +277,9 @@ function ComunaTable() {
             {head("comuna", "Comuna")}
             <th>Sector</th>
             {head("zones", "Barrios", true)}
-            {head("incidents", "Incidentes 7d", true)}
+            {head("incidents", "Inc./sem (prom)", true)}
             {head("ratePer100k", "Tasa /100k", true)}
-            {head("delta", "Δ semanal", true)}
+            {head("delta", "Δ año vs año", true)}
             {head("avgRisk", "Riesgo prom.", true)}
             <th>Acción sugerida</th>
           </tr>
@@ -402,14 +407,23 @@ function CuadrantesList() {
 
 // ── Map block (reuses MapView) ─────────────────────────────────────────
 function GovMap() {
+  const { data: alerts } = useApiData(api.govAlerts, ALERTS, []);
+  const { data: k } = useApiData(api.govKpi, KPI, []);
+  // Hora del día para el modelo: la actual local del cliente. Así el coloreado
+  // refleja el riesgo predicho ahora, no una hora fija.
+  const hour = new Date().getHours();
+  const headline = alerts.length === 1 ? "1 alerta activa" : `${alerts.length} alertas activas`;
+  const sub = k?.referenceDate
+    ? `Riesgo modelo · ${hour}:00 · histórico hasta ${k.referenceDate}`
+    : "Mapa operativo · ahora";
   return (
     <div className="gov-map-block">
-      <MapH3 theme="dark" vizType="hex" hour={19}
+      <MapH3 theme="dark" vizType="hex" hour={hour}
         palette={["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"]}
         showCAI={true} zoomPosition="topright" />
       <div className="gov-map-overlay">
-        <div className="gov-map-overlay-eyebrow">Mapa operativo · ahora</div>
-        <div className="gov-map-overlay-h">5 alertas activas</div>
+        <div className="gov-map-overlay-eyebrow">{sub}</div>
+        <div className="gov-map-overlay-h">{headline}</div>
       </div>
     </div>
   );

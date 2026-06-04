@@ -185,10 +185,10 @@ def kpi_payload(roc_auc: float | None = None) -> dict:
     prev7 = sum(daily_count(d) for d in _date_range(prev_ref, 7)) if prev_ref else 0
     inc_delta = ((last7 - prev7) / prev7 * 100) if prev7 > 0 else 0.0
 
-    # Hurto de celular no existe en el dataset: usamos "Hurto persona" como
-    # serie principal y "Lesiones" para la segunda tarjeta.
-    cel_last7 = sum(daily_count_by_crime(d, "lesiones") for d in _date_range(ref, 7))
-    cel_prev7 = sum(daily_count_by_crime(d, "lesiones") for d in _date_range(prev_ref, 7)) if prev_ref else 0
+    # KPI secundario = Homicidios (es lo más relevante para una secretaría de
+    # seguridad). Hurto de celular no existe en el dataset histórico.
+    cel_last7 = sum(daily_count_by_crime(d, "homicidio") for d in _date_range(ref, 7))
+    cel_prev7 = sum(daily_count_by_crime(d, "homicidio") for d in _date_range(prev_ref, 7)) if prev_ref else 0
     cel_delta = ((cel_last7 - cel_prev7) / cel_prev7 * 100) if cel_prev7 > 0 else 0.0
 
     # Precisión: ROC-AUC del modelo (si está disponible) escalado a %, con un
@@ -198,7 +198,7 @@ def kpi_payload(roc_auc: float | None = None) -> dict:
 
     # Sparks: 14 días reales para 3 series.
     spark_inc = [{"v": round(daily_count(d), 1)} for d in _date_range(ref, 14)]
-    spark_les = [{"v": round(daily_count_by_crime(d, "lesiones"), 2)} for d in _date_range(ref, 14)]
+    spark_les = [{"v": round(daily_count_by_crime(d, "homicidio"), 2)} for d in _date_range(ref, 14)]
     # Spark de precisión: pequeña variación alrededor del ROC-AUC actual.
     base = roc_auc or 0.73
     spark_acc = [{"v": round((base + math.sin(i / 2.0) * 0.012) * 100, 2)} for i in range(14)]
@@ -209,7 +209,7 @@ def kpi_payload(roc_auc: float | None = None) -> dict:
     return {
         "incidents7d": round(last7),
         "incidentsDelta": round(inc_delta, 1),
-        "secondaryLabel": "Lesiones · 7d",
+        "secondaryLabel": "Homicidios · 7d",
         "secondary7d": round(cel_last7),
         "secondaryDelta": round(cel_delta, 1),
         "predAccuracy": round(acc, 1),
