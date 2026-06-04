@@ -15,7 +15,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import config, data
+from . import config, data, gov_stats
 from .model import risk_model
 from .schemas import (
     CrimeShare, Health, HourRisk, RiskOut, Service, ZoneDetailOut, ZoneOut,
@@ -185,26 +185,53 @@ def cuadrantes() -> list[dict]:
 
 
 # ── Gobierno ─────────────────────────────────────────────────────────────────
+# Todos derivan del dataset histórico real (incidents_cali.csv, crime_monthly.csv)
+# y de las predicciones del modelo XGBoost. Si los CSVs no están, /gov_stats
+# devuelve None y caemos a los datos hardcoded (modo demo).
+
 @app.get("/gov/kpi", tags=["gobierno"])
 def gov_kpi() -> dict:
+    if gov_stats.is_ready():
+        roc = (risk_model.meta or {}).get("metrics", {}).get("roc_auc") if risk_model.is_loaded else None
+        return gov_stats.kpi_payload(roc_auc=roc)
     return data.KPI
+
+
+@app.get("/gov/series", tags=["gobierno"])
+def gov_series(
+    days: int = Query(default=90, ge=7, le=365),
+    crimes: str | None = Query(default=None, description="IDs separados por coma"),
+) -> dict:
+    """Series temporales reales por delito desde el dataset, listas para chart."""
+    if not gov_stats.is_ready():
+        raise HTTPException(503, "Dataset histórico no disponible en el backend")
+    ids = [c.strip() for c in crimes.split(",")] if crimes else None
+    return gov_stats.series_payload(days=days, crime_ids=ids)
 
 
 @app.get("/gov/alerts", tags=["gobierno"])
 def gov_alerts() -> list[dict]:
+    if gov_stats.is_ready():
+        return gov_stats.detect_alerts()
     return data.ALERTS
 
 
 @app.get("/gov/patrols", tags=["gobierno"])
 def gov_patrols() -> list[dict]:
+    if gov_stats.is_ready() and risk_model.is_loaded:
+        return gov_stats.recommend_patrols()
     return data.PATROLS
 
 
 @app.get("/gov/feed", tags=["gobierno"])
 def gov_feed() -> list[dict]:
+    if gov_stats.is_ready():
+        return gov_stats.feed_payload()
     return data.FEED
 
 
 @app.get("/gov/comunas", tags=["gobierno"])
 def gov_comunas() -> list[dict]:
+    if gov_stats.is_ready():
+        return gov_stats.comunas_table(data.ZONES)
     return data.comunas()

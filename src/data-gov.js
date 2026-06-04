@@ -19,13 +19,16 @@ function genDaily(n, base, noise, trend) {
   return days;
 }
 
+// Fallback (modo demo, sin backend): magnitudes plausibles alineadas con la
+// distribución histórica real del dataset de la Alcaldía. Cuando el backend
+// responde, /gov/series sustituye estos datos por las series reales.
 export const DAILY = {
-  "hurto-personas": genDaily(90, 38, 8, -0.12),
-  "hurto-celular":  genDaily(90, 22, 5, +0.05),
-  "hurto-motos":    genDaily(90, 9,  3, -0.01),
-  "lesiones":       genDaily(90, 11, 3, +0.02),
-  "homicidio":      genDaily(90, 3,  1.5, -0.08),
-  "violencia-intra":genDaily(90, 7,  2, +0.01),
+  "hurto-personas":  genDaily(90, 38, 8, -0.12),
+  "lesiones":        genDaily(90, 18, 4, +0.02),
+  "violencia-intra": genDaily(90, 7,  2, +0.01),
+  "homicidio":       genDaily(90, 5,  1.5, -0.08),
+  "amenaza":         genDaily(90, 3,  1.2, +0.03),
+  "delito-sexual":   genDaily(90, 1,  0.6, +0.04),
 };
 
 // Predicted vs actual (for model perf charts)

@@ -3,8 +3,11 @@ import React, { useState, useMemo } from "react";
 import MapH3 from "./MapH3.jsx";
 import { CRIMES, METRICS } from "./data.js";
 import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "./data-gov.js";
-import { useApiStatus, useApiData, useRiskMap } from "./hooks.js";
+import { useApiStatus, useApiData } from "./hooks.js";
 import { api } from "./api.js";
+
+// Traduce el selector del header (24h/7d/30d/90d/YTD) a días para la API.
+const PERIOD_DAYS = { "24h": 14, "7d": 30, "30d": 60, "90d": 90, "YTD": 365 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 function nfmt(n) {
@@ -94,23 +97,27 @@ function KPI_Card({ label, value, suffix, delta, deltaSuffix = "%", good = "down
 }
 
 function KPIRow() {
-  const k = KPI;
-  // Build sparks from daily data
-  const hPersonas = DAILY["hurto-personas"].slice(-14);
-  const hCelular  = DAILY["hurto-celular"].slice(-14);
-  const accuracy  = DRIFT.slice(-14).map(d => ({ v: d.accuracy * 100 }));
+  const { data: k } = useApiData(api.govKpi, KPI, []);
+  // Sparks: del backend cuando hay (datos reales del histórico); si no, de
+  // data-gov.js como respaldo.
+  const sparkInc = k?.sparks?.incidents || DAILY["hurto-personas"].slice(-14);
+  const sparkSec = k?.sparks?.secondary || DAILY["hurto-celular"].slice(-14);
+  const sparkAcc = k?.sparks?.accuracy  || DRIFT.slice(-14).map(d => ({ v: d.accuracy * 100 }));
+  const secondaryLabel = k?.secondaryLabel || "Hurto celular · 7d";
+  const secondaryValue = k?.secondary7d ?? 165;
+  const secondaryDelta = k?.secondaryDelta ?? +5.1;
 
   return (
     <div className="gov-kpis">
       <KPI_Card label="Incidentes · 7 días"
         value={nfmt(k.incidents7d)} delta={k.incidentsDelta} good="down"
-        spark={hPersonas} sparkColor="var(--pls-accent)" />
-      <KPI_Card label="Hurto celular · 7d"
-        value={nfmt(165)} delta={+5.1} good="down"
-        spark={hCelular} sparkColor="var(--pls-warn)" />
+        spark={sparkInc} sparkColor="var(--pls-accent)" />
+      <KPI_Card label={secondaryLabel}
+        value={nfmt(secondaryValue)} delta={secondaryDelta} good="down"
+        spark={sparkSec} sparkColor="var(--pls-warn)" />
       <KPI_Card label="Precisión modelo"
         value={k.predAccuracy.toFixed(1)} suffix="%" delta={k.accuracyDelta} good="up"
-        spark={accuracy} sparkColor="var(--pls-cool)" />
+        spark={sparkAcc} sparkColor="var(--pls-cool)" />
       <KPI_Card label="Alertas activas"
         value={k.activeAlerts} delta={k.alertsDelta} good="down" deltaSuffix="" />
       <KPI_Card label="Patrullas asignadas"
@@ -122,14 +129,19 @@ function KPIRow() {
 }
 
 // ── Time series chart ───────────────────────────────────────────────────
-function TimeSeries({ activeIds, palette }) {
+function TimeSeries({ activeIds, seriesData }) {
   const W = 800, H = 200, PAD = { l: 30, r: 12, t: 16, b: 22 };
 
-  const series = activeIds.map(id => ({
-    id,
-    label: CRIMES.find(c => c.id === id)?.label || id,
-    data: DAILY[id] || [],
-  }));
+  // seriesData es { [id]: [{date, v}, ...] } del backend, o DAILY como respaldo.
+  const series = activeIds.map(id => {
+    const raw = seriesData?.[id] || DAILY[id] || [];
+    // Backend usa date como ISO string; el chart espera Date para el formato.
+    const data = raw.map(p => ({
+      date: p.date instanceof Date ? p.date : new Date(p.date),
+      v: p.v,
+    }));
+    return { id, label: CRIMES.find(c => c.id === id)?.label || id, data };
+  });
 
   const allVals = series.flatMap(s => s.data.map(d => d.v));
   const ymax = Math.ceil(Math.max(...allVals, 10) / 10) * 10;
@@ -184,26 +196,36 @@ function TimeSeries({ activeIds, palette }) {
   );
 }
 
-function SeriesBlock() {
+function SeriesBlock({ period }) {
   const colors = ["#FF5A36", "#FFD166", "#5FB7E6", "#9BD142", "#E14820", "#A78BFA"];
-  const [active, setActive] = useState(["hurto-personas", "hurto-celular", "homicidio"]);
+  const [active, setActive] = useState(["hurto-personas", "lesiones", "homicidio"]);
+  const days = PERIOD_DAYS[period] ?? 90;
+  // Backend: { days, referenceDate, series: { [id]: [{date,v}, ...] } }
+  const fallback = useMemo(() => ({ days, series: DAILY }), [days]);
+  const { data: payload } = useApiData(() => api.govSeries(days), fallback, [days]);
+  const seriesData = payload?.series || DAILY;
 
   function toggle(id) {
     setActive(a => a.includes(id) ? (a.length > 1 ? a.filter(x => x !== id) : a) : [...a, id]);
   }
 
-  // Totals per crime in last 7 days
+  // Totales últimos 7 días del periodo cargado, por delito (para la sidebar).
   const totals = CRIMES.map((c, i) => {
-    const last7 = DAILY[c.id].slice(-7).reduce((s, d) => s + d.v, 0);
-    return { ...c, color: colors[i], last7 };
+    const arr = seriesData[c.id] || [];
+    const last7 = arr.slice(-7).reduce((s, d) => s + d.v, 0);
+    return { ...c, color: colors[i], last7: Math.round(last7) };
   });
+
+  const subtitle = payload?.referenceDate
+    ? `${days} días · incidentes/día · histórico hasta ${payload.referenceDate}`
+    : `${days} días · incidentes/día`;
 
   return (
     <div className="gov-series">
       <div className="gov-series-side">
         <div>
           <h3 className="gov-series-h">Series por delito</h3>
-          <p className="gov-series-sub">90 días · incidentes/día</p>
+          <p className="gov-series-sub">{subtitle}</p>
         </div>
         <ul className="gov-crime-list">
           {totals.map(c => (
@@ -216,7 +238,7 @@ function SeriesBlock() {
         </ul>
       </div>
       <div className="gov-series-chart">
-        <TimeSeries activeIds={active} />
+        <TimeSeries activeIds={active} seriesData={seriesData} />
       </div>
     </div>
   );
@@ -431,7 +453,7 @@ export default function App() {
               <button className={tab === "series" ? "is-on" : ""} onClick={() => setTab("series")}>Series por delito</button>
               <button className={tab === "comunas" ? "is-on" : ""} onClick={() => setTab("comunas")}>Comunas</button>
             </div>
-            {tab === "series" ? <SeriesBlock /> : <ComunaTable />}
+            {tab === "series" ? <SeriesBlock period={period} /> : <ComunaTable />}
           </div>
         </div>
 

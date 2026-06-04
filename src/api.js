@@ -47,6 +47,7 @@ export const api = {
   cuadrantes: () => get("/cuadrantes"),
   // Gobierno
   govKpi: () => get("/gov/kpi"),
+  govSeries: (days = 90, crimes) => get(`/gov/series${q({ days, crimes: crimes?.join(",") })}`),
   govAlerts: () => get("/gov/alerts"),
   govPatrols: () => get("/gov/patrols"),
   govFeed: () => get("/gov/feed"),
