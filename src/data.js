@@ -36,14 +36,17 @@ export const HOURS = {
   18: 1.15, 19: 1.20, 20: 1.25, 21: 1.30, 22: 1.32, 23: 1.30,
 };
 
-// Top crime categories (DANE/SIEDCO style)
+// Categorías de delito ("conflictividades") según los datos REALES de la Alcaldía
+// de Cali (2010-2018, ~165k incidentes). Los `share` están calculados sobre el
+// total histórico del dataset; `trend` queda como respaldo visual (el delta real
+// llega vía /gov/series y /gov/comunas cuando el backend está conectado).
 export const CRIMES = [
-  { id: "hurto-personas", label: "Hurto a personas",   share: 0.42, trend: -3 },
-  { id: "hurto-celular",  label: "Hurto de celular",   share: 0.24, trend: +5 },
-  { id: "hurto-motos",    label: "Hurto de motos",     share: 0.10, trend: -1 },
-  { id: "lesiones",       label: "Lesiones personales",share: 0.12, trend: +2 },
-  { id: "homicidio",      label: "Homicidio",          share: 0.04, trend: -8 },
-  { id: "violencia-intra",label: "Violencia intrafam.",share: 0.08, trend: +1 },
+  { id: "hurto-personas",  label: "Hurto a personas",        share: 0.49, trend: -3 },
+  { id: "lesiones",        label: "Lesiones personales",     share: 0.27, trend: +2 },
+  { id: "violencia-intra", label: "Violencia intrafamiliar", share: 0.10, trend: +1 },
+  { id: "homicidio",       label: "Homicidio",               share: 0.07, trend: -8 },
+  { id: "amenaza",         label: "Amenaza",                 share: 0.05, trend: +3 },
+  { id: "delito-sexual",   label: "Delito sexual",           share: 0.02, trend: +4 },
 ];
 
 // Unidades de Policía de Cali (CAI, Estaciones y Subestaciones) ingestadas
