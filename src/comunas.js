@@ -45,7 +45,7 @@ export const CALI_BBOX = [
 
 // Distancia (km) máx. de un hex al centroide de comuna más cercano para
 // considerarlo "dentro de la ciudad" (recorte de la silueta urbana).
-export const CITY_CLIP_KM = 2.6;
+export const CITY_CLIP_KM = 1.8;
 
 const RAD = Math.PI / 180;
 export function haversineKm(aLat, aLon, bLat, bLon) {
