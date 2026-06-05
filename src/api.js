@@ -46,10 +46,11 @@ export const api = {
   reports: () => get("/reports"),
   cuadrantes: () => get("/cuadrantes"),
   // Gobierno
-  govKpi: () => get("/gov/kpi"),
-  govSeries: (days = 90, crimes) => get(`/gov/series${q({ days, crimes: crimes?.join(",") })}`),
-  govAlerts: () => get("/gov/alerts"),
+  govYears: () => get("/gov/years"),
+  govKpi: (year) => get(`/gov/kpi${q({ year })}`),
+  govSeries: (days = 90, crimes, year) => get(`/gov/series${q({ days, crimes: crimes?.join(","), year })}`),
+  govAlerts: (year) => get(`/gov/alerts${q({ year })}`),
   govPatrols: () => get("/gov/patrols"),
   govFeed: () => get("/gov/feed"),
-  govComunas: () => get("/gov/comunas"),
+  govComunas: (year) => get(`/gov/comunas${q({ year })}`),
 };

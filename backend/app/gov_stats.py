@@ -121,6 +121,37 @@ def reference_date() -> date | None:
     return d["ref_date"] if d else None
 
 
+def available_years() -> dict:
+    """Catálogo de años para el selector del dashboard. Solo años con cobertura
+    razonable (≥50% del más activo y 12 meses representados)."""
+    d = _load_incidents()
+    if not d:
+        return {"years": [], "default": None, "all": []}
+    return {
+        "years": d["full_years"],
+        "default": d["ref_year"],
+        "all": d["years"],
+    }
+
+
+def _resolve_ref(year: int | None) -> tuple[date, int | None]:
+    """Devuelve (ref_date, prev_year) según el año pedido. Si year no se pasa,
+    usa el último año completo del dataset (comportamiento por defecto)."""
+    inc = _load_incidents()
+    if not inc:
+        return date(2018, 12, 31), None
+    full = inc["full_years"]
+    if year is None:
+        y = inc["ref_year"]
+    else:
+        y = year if year in full else (full[-1] if full else inc["years"][-1])
+    prev = None
+    if full and y in full:
+        idx = full.index(y)
+        prev = full[idx - 1] if idx > 0 else None
+    return date(y, 12, 31), prev
+
+
 # ── Reconstrucción de serie diaria ──────────────────────────────────────────
 def _weekdays_in_month(year: int, month: int, wd: int) -> int:
     last = calendar.monthrange(year, month)[1]
@@ -171,21 +202,24 @@ def _date_range(end: date, days: int) -> list[date]:
 
 
 # ── KPIs ────────────────────────────────────────────────────────────────────
-def kpi_payload(roc_auc: float | None = None) -> dict:
-    """Métricas reales para las 6 tarjetas del header del dashboard."""
+def kpi_payload(roc_auc: float | None = None, year: int | None = None) -> dict:
+    """Métricas reales para las 6 tarjetas del header del dashboard.
+
+    Si `year` se pasa, todo se calcula respecto al cierre de ese año (delta YoY
+    contra el año inmediatamente anterior disponible). Si no, usa el último año
+    completo del dataset.
+    """
     inc = _load_incidents()
     if not inc:
         return {}
-    ref = inc["ref_date"]
-    # Incidentes últimos 7 días (de ref_year) vs los mismos 7 días del año
-    # anterior. Comparar semana vs semana del mismo año daría 0 porque la malla
-    # es agregada (year, month, weekday), no diaria; año vs año sí varía.
+    ref, prev_year = _resolve_ref(year)
+    prev_ref = date(prev_year, 12, 31) if prev_year else None
+
     last7 = sum(daily_count(d) for d in _date_range(ref, 7))
-    prev_ref = ref.replace(year=ref.year - 1) if ref.year - 1 in inc["full_years"] else None
     prev7 = sum(daily_count(d) for d in _date_range(prev_ref, 7)) if prev_ref else 0
     inc_delta = ((last7 - prev7) / prev7 * 100) if prev7 > 0 else 0.0
 
-    # KPI secundario = Homicidios (es lo más relevante para una secretaría de
+    # KPI secundario = Homicidios (lo más relevante para una secretaría de
     # seguridad). Hurto de celular no existe en el dataset histórico.
     cel_last7 = sum(daily_count_by_crime(d, "homicidio") for d in _date_range(ref, 7))
     cel_prev7 = sum(daily_count_by_crime(d, "homicidio") for d in _date_range(prev_ref, 7)) if prev_ref else 0
@@ -203,10 +237,12 @@ def kpi_payload(roc_auc: float | None = None) -> dict:
     base = roc_auc or 0.73
     spark_acc = [{"v": round((base + math.sin(i / 2.0) * 0.012) * 100, 2)} for i in range(14)]
 
-    alerts = detect_alerts()
+    alerts = detect_alerts(year=year)
     patrols = recommend_patrols()
 
     return {
+        "year": ref.year,
+        "previousYear": prev_year,
         "incidents7d": round(last7),
         "incidentsDelta": round(inc_delta, 1),
         "secondaryLabel": "Homicidios · 7d",
@@ -231,13 +267,14 @@ def kpi_payload(roc_auc: float | None = None) -> dict:
 
 
 # ── Series temporales por delito ────────────────────────────────────────────
-def series_payload(days: int = 90, crime_ids: list[str] | None = None) -> dict:
-    """Series reales de incidentes/día por delito, terminando en la fecha de
-    referencia del dataset. Si crime_ids es None, devuelve los 6 delitos."""
-    inc = _load_incidents()
-    if not inc:
+def series_payload(days: int = 90, crime_ids: list[str] | None = None,
+                   year: int | None = None) -> dict:
+    """Series reales de incidentes/día por delito, terminando en el cierre del
+    año pedido (o del último año completo). Si crime_ids es None, devuelve los
+    6 delitos."""
+    if not is_ready():
         return {}
-    ref = inc["ref_date"]
+    ref, _ = _resolve_ref(year)
     ids = crime_ids or list(CRIME_LABEL.keys())
     out: dict[str, list[dict]] = {}
     for cid in ids:
@@ -245,20 +282,26 @@ def series_payload(days: int = 90, crime_ids: list[str] | None = None) -> dict:
             {"date": d.isoformat(), "v": round(daily_count_by_crime(d, cid), 2)}
             for d in _date_range(ref, days)
         ]
-    return {"days": days, "referenceDate": ref.isoformat() if ref else None, "series": out}
+    return {"days": days, "year": ref.year, "referenceDate": ref.isoformat(), "series": out}
 
 
 # ── Tabla por comuna con delta real ─────────────────────────────────────────
-def comunas_table(zones: list[dict]) -> list[dict]:
+def comunas_table(zones: list[dict], year: int | None = None) -> list[dict]:
     """Tabla de comunas con incidentes/semana promedio histórico y delta real
-    año vs año (último año completo contra el anterior)."""
+    año vs año. Si `year` se pasa, compara ese año contra el anterior;
+    si no, último año completo contra el anterior."""
     inc = _load_incidents()
     if not inc:
         return []
     years = inc["years"]
     full_years = inc["full_years"]
-    last_full = full_years[-1] if full_years else (years[-1] if years else None)
-    prev_full = full_years[-2] if len(full_years) >= 2 else None
+    if year is not None and year in full_years and full_years.index(year) > 0:
+        idx = full_years.index(year)
+        last_full = full_years[idx]
+        prev_full = full_years[idx - 1]
+    else:
+        last_full = full_years[-1] if full_years else (years[-1] if years else None)
+        prev_full = full_years[-2] if len(full_years) >= 2 else None
 
     # Metadatos por comuna (del frontend embebido en backend/app/data.py).
     sector_by: dict[int, str] = {}
@@ -299,8 +342,8 @@ def comunas_table(zones: list[dict]) -> list[dict]:
 
 
 # ── Detección automática de alertas ─────────────────────────────────────────
-def detect_alerts() -> list[dict]:
-    """Anomalías por comuna: comparar el último año completo del histórico
+def detect_alerts(year: int | None = None) -> list[dict]:
+    """Anomalías por comuna: comparar el año pedido (o el último completo)
     contra el promedio de los años anteriores y reportar las comunas con
     crecimiento más anómalo. Cada alerta es 1 comuna con sugerencia."""
     inc = _load_incidents()
@@ -310,8 +353,13 @@ def detect_alerts() -> list[dict]:
     full_years = inc["full_years"]
     if len(full_years) < 2:
         return []
-    last = full_years[-1]
-    prior = full_years[:-1]
+    if year is not None and year in full_years and full_years.index(year) > 0:
+        idx = full_years.index(year)
+        last = full_years[idx]
+        prior = full_years[:idx]
+    else:
+        last = full_years[-1]
+        prior = full_years[:-1]
 
     rows = []
     for c in range(1, 23):
