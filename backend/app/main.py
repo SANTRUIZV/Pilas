@@ -189,11 +189,19 @@ def cuadrantes() -> list[dict]:
 # y de las predicciones del modelo XGBoost. Si los CSVs no están, /gov_stats
 # devuelve None y caemos a los datos hardcoded (modo demo).
 
+@app.get("/gov/years", tags=["gobierno"])
+def gov_years() -> dict:
+    """Catálogo de años disponibles para el selector del dashboard."""
+    if gov_stats.is_ready():
+        return gov_stats.available_years()
+    return {"years": [], "default": None, "all": []}
+
+
 @app.get("/gov/kpi", tags=["gobierno"])
-def gov_kpi() -> dict:
+def gov_kpi(year: int | None = Query(default=None, ge=2000, le=2100)) -> dict:
     if gov_stats.is_ready():
         roc = (risk_model.meta or {}).get("metrics", {}).get("roc_auc") if risk_model.is_loaded else None
-        return gov_stats.kpi_payload(roc_auc=roc)
+        return gov_stats.kpi_payload(roc_auc=roc, year=year)
     return data.KPI
 
 
@@ -201,18 +209,19 @@ def gov_kpi() -> dict:
 def gov_series(
     days: int = Query(default=90, ge=7, le=365),
     crimes: str | None = Query(default=None, description="IDs separados por coma"),
+    year: int | None = Query(default=None, ge=2000, le=2100),
 ) -> dict:
     """Series temporales reales por delito desde el dataset, listas para chart."""
     if not gov_stats.is_ready():
         raise HTTPException(503, "Dataset histórico no disponible en el backend")
     ids = [c.strip() for c in crimes.split(",")] if crimes else None
-    return gov_stats.series_payload(days=days, crime_ids=ids)
+    return gov_stats.series_payload(days=days, crime_ids=ids, year=year)
 
 
 @app.get("/gov/alerts", tags=["gobierno"])
-def gov_alerts() -> list[dict]:
+def gov_alerts(year: int | None = Query(default=None, ge=2000, le=2100)) -> list[dict]:
     if gov_stats.is_ready():
-        return gov_stats.detect_alerts()
+        return gov_stats.detect_alerts(year=year)
     return data.ALERTS
 
 
@@ -231,7 +240,7 @@ def gov_feed() -> list[dict]:
 
 
 @app.get("/gov/comunas", tags=["gobierno"])
-def gov_comunas() -> list[dict]:
+def gov_comunas(year: int | None = Query(default=None, ge=2000, le=2100)) -> list[dict]:
     if gov_stats.is_ready():
-        return gov_stats.comunas_table(data.ZONES)
+        return gov_stats.comunas_table(data.ZONES, year=year)
     return data.comunas()

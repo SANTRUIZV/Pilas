@@ -6,8 +6,8 @@ import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "./data-gov.js
 import { useApiStatus, useApiData } from "./hooks.js";
 import { api } from "./api.js";
 
-// Traduce el selector del header (24h/7d/30d/90d/YTD) a días para la API.
-const PERIOD_DAYS = { "24h": 14, "7d": 30, "30d": 60, "90d": 90, "YTD": 365 };
+// Traduce el selector del header a días para la API de series.
+const PERIOD_DAYS = { "7d": 14, "30d": 30, "90d": 90, "6m": 180, "1a": 365 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 function nfmt(n) {
@@ -19,7 +19,7 @@ function deltaSign(d) {
 }
 
 // ── Header ──────────────────────────────────────────────────────────────
-function GovHeader({ period, setPeriod, status }) {
+function GovHeader({ period, setPeriod, year, setYear, years, status }) {
   const live = status?.online;
   return (
     <header className="gov-hd">
@@ -49,8 +49,18 @@ function GovHeader({ period, setPeriod, status }) {
           <span className="pls-pill-dot" style={live ? null : { background: "var(--pls-fg-faint)", boxShadow: "none", animation: "none" }}></span>
           {live ? "API" : "Demo"} · <strong>{live && status.source === "model" ? "XGBoost (real)" : "XGBoost v0.4.2"}</strong>
         </span>
-        <div className="gov-period">
-          {["24h","7d","30d","90d","YTD"].map(p => (
+        {years && years.length > 0 && (
+          <label className="gov-period" style={{ padding: "0 6px", gap: 6 }} title="Año del histórico a analizar">
+            <span style={{ fontSize: 11, color: "var(--pls-fg-mute)", textTransform: "uppercase", letterSpacing: ".06em" }}>Año</span>
+            <select value={year ?? ""} onChange={e => setYear(parseInt(e.target.value, 10))}
+              style={{ background: "transparent", color: "var(--pls-fg)", border: "none", outline: "none",
+                       font: "inherit", padding: "4px 2px", cursor: "pointer" }}>
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </label>
+        )}
+        <div className="gov-period" title="Rango de la serie temporal">
+          {["7d","30d","90d","6m","1a"].map(p => (
             <button key={p} className={period === p ? "is-on" : ""} onClick={() => setPeriod(p)}>{p}</button>
           ))}
         </div>
@@ -100,8 +110,8 @@ function KPI_Card({ label, value, suffix, delta, deltaSuffix = "%", good = "down
 const num = (v, d = 0) => (typeof v === "number" && !Number.isNaN(v) ? v : d);
 const arr = (v) => (Array.isArray(v) && v.length ? v : null);
 
-function KPIRow() {
-  const { data: k } = useApiData(api.govKpi, KPI, []);
+function KPIRow({ year }) {
+  const { data: k } = useApiData(() => api.govKpi(year), KPI, [year]);
   // Sparks: del backend cuando hay (datos reales del histórico); si no,
   // generados desde el DAILY de respaldo. Defensivo: si un id no existe en
   // DAILY (por cambios de taxonomía), usar [].
@@ -201,13 +211,17 @@ function TimeSeries({ activeIds, seriesData }) {
   );
 }
 
-function SeriesBlock({ period }) {
+function SeriesBlock({ period, year }) {
   const colors = ["#FF5A36", "#FFD166", "#5FB7E6", "#9BD142", "#E14820", "#A78BFA"];
   const [active, setActive] = useState(["hurto-personas", "lesiones", "homicidio"]);
   const days = PERIOD_DAYS[period] ?? 90;
-  // Backend: { days, referenceDate, series: { [id]: [{date,v}, ...] } }
+  // Backend: { days, year, referenceDate, series: { [id]: [{date,v}, ...] } }
   const fallback = useMemo(() => ({ days, series: DAILY }), [days]);
-  const { data: payload } = useApiData(() => api.govSeries(days), fallback, [days]);
+  const { data: payload } = useApiData(
+    () => api.govSeries(days, undefined, year),
+    fallback,
+    [days, year],
+  );
   const seriesData = payload?.series || DAILY;
 
   function toggle(id) {
@@ -250,9 +264,9 @@ function SeriesBlock({ period }) {
 }
 
 // ── Comuna table ────────────────────────────────────────────────────────
-function ComunaTable() {
+function ComunaTable({ year }) {
   const [sort, setSort] = useState({ key: "incidents", dir: -1 });
-  const { data: comunas } = useApiData(api.govComunas, COMUNAS, []);
+  const { data: comunas } = useApiData(() => api.govComunas(year), COMUNAS, [year]);
   const rows = useMemo(() => {
     const r = [...comunas];
     r.sort((a, b) => (a[sort.key] > b[sort.key] ? 1 : -1) * sort.dir);
@@ -306,8 +320,8 @@ function ComunaTable() {
 }
 
 // ── Alerts ─────────────────────────────────────────────────────────────
-function AlertsList({ onPick }) {
-  const { data: alerts } = useApiData(api.govAlerts, ALERTS, []);
+function AlertsList({ year }) {
+  const { data: alerts } = useApiData(() => api.govAlerts(year), ALERTS, [year]);
   return (
     <>
       {alerts.map(a => (
@@ -406,9 +420,9 @@ function CuadrantesList() {
 }
 
 // ── Map block (reuses MapView) ─────────────────────────────────────────
-function GovMap() {
-  const { data: alerts } = useApiData(api.govAlerts, ALERTS, []);
-  const { data: k } = useApiData(api.govKpi, KPI, []);
+function GovMap({ year }) {
+  const { data: alerts } = useApiData(() => api.govAlerts(year), ALERTS, [year]);
+  const { data: k } = useApiData(() => api.govKpi(year), KPI, [year]);
   // Hora del día para el modelo: la actual local del cliente. Así el coloreado
   // refleja el riesgo predicho ahora, no una hora fija.
   const hour = new Date().getHours();
@@ -449,39 +463,47 @@ function GovFooter() {
 
 // ── App ────────────────────────────────────────────────────────────────
 export default function App() {
-  const [period, setPeriod] = useState("7d");
+  const [period, setPeriod] = useState("90d");
   const [tab, setTab] = useState("series");
   const [railTab, setRailTab] = useState("alerts");
+  const [year, setYear] = useState(null);  // null = backend usa el último año completo
   const status = useApiStatus();
+
+  // Catálogo de años disponibles del backend. Cuando llega el default sugerido
+  // (último año completo), se fija como year inicial.
+  const { data: yearsData } = useApiData(api.govYears, { years: [], default: null }, []);
+  const years = yearsData?.years || [];
+  React.useEffect(() => {
+    if (year == null && yearsData?.default) setYear(yearsData.default);
+  }, [yearsData?.default]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="pls-app gov-app">
-      <GovHeader period={period} setPeriod={setPeriod} status={status} />
+      <GovHeader period={period} setPeriod={setPeriod}
+        year={year} setYear={setYear} years={years} status={status} />
       <div className="gov-main">
-        <KPIRow />
+        <KPIRow year={year} />
 
         <div className="gov-center">
-          <GovMap />
+          <GovMap year={year} />
           <div>
             <div className="gov-tabs">
               <button className={tab === "series" ? "is-on" : ""} onClick={() => setTab("series")}>Series por delito</button>
               <button className={tab === "comunas" ? "is-on" : ""} onClick={() => setTab("comunas")}>Comunas</button>
             </div>
-            {tab === "series" ? <SeriesBlock period={period} /> : <ComunaTable />}
+            {tab === "series" ? <SeriesBlock period={period} year={year} /> : <ComunaTable year={year} />}
           </div>
         </div>
 
         <div className="gov-rail">
           <div className="gov-rail-tabs">
-            <button className={railTab === "alerts" ? "is-on" : ""} onClick={() => setRailTab("alerts")}>
-              Alertas <span className="gov-rail-tab-badge">5</span>
-            </button>
+            <button className={railTab === "alerts" ? "is-on" : ""} onClick={() => setRailTab("alerts")}>Alertas</button>
             <button className={railTab === "patrols" ? "is-on" : ""} onClick={() => setRailTab("patrols")}>Patrullas</button>
             <button className={railTab === "feed" ? "is-on" : ""} onClick={() => setRailTab("feed")}>Actividad</button>
             <button className={railTab === "cuad" ? "is-on" : ""} onClick={() => setRailTab("cuad")}>Cuadrantes</button>
           </div>
           <div className="gov-rail-body">
-            {railTab === "alerts"  && <AlertsList />}
+            {railTab === "alerts"  && <AlertsList year={year} />}
             {railTab === "patrols" && <PatrolsList />}
             {railTab === "feed"    && <FeedList />}
             {railTab === "cuad"    && <CuadrantesList />}
