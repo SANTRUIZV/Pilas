@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { polygonToCells, cellToBoundary, latLngToCell, gridDisk } from "h3-js";
-import { ZONES, CAI as CAI_STATIC } from "./data.js";
+import { ZONES, CAI as CAI_STATIC, HOSPITALS as HOSPITALS_STATIC } from "./data.js";
 import { COMUNAS, COMUNA_POLYS, CALI_CENTER } from "./comunas.js";
 import { useComunaRisk, useApiData } from "./hooks.js";
 import { api } from "./api.js";
@@ -60,6 +60,7 @@ export default function MapH3({
   selectedZoneId,
   onSelectZone,
   showCAI = true,
+  showHospitals = false,
   routeFrom,
   routeTo,
   zoomPosition = "topleft",
@@ -70,11 +71,13 @@ export default function MapH3({
   const hexLayerRef = useRef(null);
   const labelLayerRef = useRef(null);
   const caiLayerRef = useRef(null);
+  const hospLayerRef = useRef(null);
   const routeLayerRef = useRef(null);
   const cellsRef = useRef([]); // [{layer, comuna}]
 
   const { byComuna } = useComunaRisk(hour);
   const { data: cai } = useApiData(api.cai, CAI_STATIC, []); // CAI reales del API, fallback estático
+  const { data: hospitals } = useApiData(api.hospitals, HOSPITALS_STATIC, []); // servicios de salud reales
   const res = vizType === "barrio" ? 8 : 9;
   const fillOpacity = vizType === "heat" ? 0.72 : vizType === "barrio" ? 0.5 : 0.58;
   const selectedComuna = selectedZoneId ? COMUNA_BY_ZONE[selectedZoneId] : null;
@@ -136,6 +139,7 @@ export default function MapH3({
     mapRef.current = map;
     hexLayerRef.current = L.layerGroup().addTo(map);
     caiLayerRef.current = L.layerGroup().addTo(map);
+    hospLayerRef.current = L.layerGroup().addTo(map);
     labelLayerRef.current = L.layerGroup().addTo(map);
     routeLayerRef.current = L.layerGroup().addTo(map);
     setTimeout(() => map.invalidateSize(), 60);
@@ -212,6 +216,29 @@ export default function MapH3({
       }).bindTooltip(tip, { direction: "top" }).addTo(layer);
     }
   }, [showCAI, theme, cai]);
+
+  // ── Marcadores de centros médicos (cruz verde, como en la leyenda) ──────
+  useEffect(() => {
+    const layer = hospLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!showHospitals) return;
+    const bg = theme === "dark" ? "#0E1116" : "#fff";
+    for (const h of hospitals) {
+      const tip = `<b>${h.name}</b>`
+        + (h.address ? `<br><span style="opacity:.75">${h.address}</span>` : "")
+        + (h.phone ? `<br>☎ ${h.phone}` : "");
+      const icon = L.divIcon({
+        className: "",
+        html: `<span style="display:grid;place-items:center;width:16px;height:16px;border-radius:5px;background:${bg};border:2px solid #9BD142;color:#9BD142;font:700 11px/1 ui-monospace,monospace;box-sizing:border-box;">+</span>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      });
+      L.marker([h.lat, h.lon], { icon, keyboard: false })
+        .bindTooltip(tip, { direction: "top" })
+        .addTo(layer);
+    }
+  }, [showHospitals, theme, hospitals]);
 
   // ── Ruta ────────────────────────────────────────────────────────────────
   useEffect(() => {
