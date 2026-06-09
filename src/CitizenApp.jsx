@@ -1,7 +1,7 @@
 // Pilas — App ciudadana (mapa, rutas, pulso, reportes, modo turista).
 import React, { useState, useEffect } from "react";
 import MapH3 from "./MapH3.jsx";
-import { ZONES, CAI, HOSPITALS, TOURISM, REPORTS, METRICS, riskClass, riskLabel, riskScore } from "./data.js";
+import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, riskClass, riskLabel, riskScore } from "./data.js";
 import { ZoneDetail, RoutePlanner, ReportsFeed, Trends } from "./Panels.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "./Tweaks.jsx";
 import { useApiStatus, useRiskMap, useApiData } from "./hooks.js";
@@ -170,14 +170,6 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
             <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{HOSPITALS.length}</span>
           </label>
           <label className="pls-layer">
-            <input type="checkbox" checked={layers.tourism} onChange={e => setLayers({ ...layers, tourism: e.target.checked })} />
-            <span className="pls-layer-box"></span>
-            <span className="pls-layer-mark" style={{ color: "var(--pls-accent-2)" }}>★</span>
-            <span>{audience === "tourist" ? "Attractions" : "Sitios turísticos"}</span>
-            <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{TOURISM.length}</span>
-          </label>
-          <label className="pls-layer">
             <input type="checkbox" checked={layers.reports} onChange={e => setLayers({ ...layers, reports: e.target.checked })} />
             <span className="pls-layer-box"></span>
             <span className="pls-layer-mark" style={{ color: "var(--pls-accent)" }}>!</span>
@@ -281,7 +273,7 @@ export default function App() {
   const [selectedZoneId, setSelectedZoneId] = useState("san-antonio");
   const [routeFrom, setRouteFrom] = useState(null);
   const [routeTo, setRouteTo] = useState(null);
-  const [layers, setLayers] = useState({ cai: true, hosp: false, tourism: false, reports: true });
+  const [layers, setLayers] = useState({ cai: true, hosp: false, reports: true });
   const [tweaksOpen, setTweaksOpen] = useState(false);
 
   const status = useApiStatus();
@@ -294,11 +286,6 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", t.theme);
   }, [t.theme]);
-
-  // When in tourist mode, show tourism layer
-  useEffect(() => {
-    if (t.audience === "tourist") setLayers(l => ({ ...l, tourism: true }));
-  }, [t.audience]);
 
   const currentZone = ZONES.find(z => z.id === selectedZoneId);
   const score = currentZone ? riskOf(currentZone, hour) : 0;
