@@ -1,0 +1,178 @@
+/* Pilas — Landing (elige vista ciudadana o gobierno).
+   Extiende styles.css: mismos tokens, tipografías y footer ticker. */
+
+html:has(.lnd), body:has(.lnd), html:has(.lnd) #root {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.lnd {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.lnd-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--pls-line);
+}
+
+.lnd-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 56px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+/* Hero */
+.lnd-hero { display: flex; flex-direction: column; gap: 18px; max-width: 720px; }
+.lnd-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pls-fg-mute);
+  font-weight: 600;
+}
+.lnd-title {
+  font-family: var(--pls-display);
+  font-weight: 700;
+  font-size: clamp(38px, 7vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+.lnd-sub {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--pls-fg-mute);
+  margin: 0;
+  max-width: 640px;
+}
+.lnd-sub strong { color: var(--pls-fg); font-weight: 500; }
+
+/* Tarjetas de elección */
+.lnd-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.lnd-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  background: var(--pls-bg-2);
+  border: 1px solid var(--pls-line);
+  border-radius: var(--pls-r-3);
+  text-decoration: none;
+  color: var(--pls-fg);
+  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+}
+.lnd-card:hover {
+  border-color: var(--pls-line-2);
+  background: var(--pls-bg-3);
+  transform: translateY(-2px);
+}
+.lnd-card-icon {
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border: 1px solid var(--pls-line-2);
+  border-radius: var(--pls-r-2);
+  background: var(--pls-bg);
+}
+.lnd-card-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pls-fg-faint);
+  font-weight: 600;
+  margin-top: 6px;
+}
+.lnd-card-h {
+  font-family: var(--pls-display);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 0;
+}
+.lnd-card-p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--pls-fg-mute);
+  margin: 0;
+}
+.lnd-feats {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.lnd-feats li {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--pls-fg);
+  padding-left: 16px;
+  position: relative;
+}
+.lnd-feats li::before {
+  content: "·";
+  position: absolute;
+  left: 2px;
+  color: var(--pls-accent);
+  font-weight: 700;
+}
+.lnd-cta {
+  margin-top: auto;
+  padding-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.lnd-card:hover .arr { transform: translateX(3px); }
+
+/* Cifras */
+.lnd-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--pls-line);
+  padding-top: 24px;
+  gap: 16px;
+}
+.lnd-stat { display: flex; flex-direction: column; gap: 3px; }
+.lnd-stat strong {
+  font-family: var(--pls-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.lnd-stat span { font-size: 11.5px; color: var(--pls-fg-mute); line-height: 1.35; }
+
+/* Responsive */
+@media (max-width: 820px) {
+  .lnd-main { padding: 36px 18px 48px; gap: 36px; }
+  .lnd-cards { grid-template-columns: 1fr; }
+  .lnd-stats { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .lnd-hd { padding: 12px 14px; }
+  .lnd-hd .pls-pill strong { display: none; }
+  .lnd-card { padding: 18px; }
+  .lnd-card-h { font-size: 24px; }
+  .lnd-stat strong { font-size: 26px; }
+}

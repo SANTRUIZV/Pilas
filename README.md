@@ -11,13 +11,15 @@ Implementación **React + Vite** de los diseños de Claude Design (`Pilas.html` 
 
 | Página | App | Para quién |
 |--------|-----|-----------|
-| [`index.html`](index.html) | **Pilas** (ciudadana) | Ciudadanos y turistas |
+| [`index.html`](index.html) | **Landing** — elige la vista | Todos |
+| [`ciudadano.html`](ciudadano.html) | **Pilas** (ciudadana) | Ciudadanos y turistas |
 | [`gobierno.html`](gobierno.html) | **Pilas Gobierno** (dashboard) | Secretaría de Seguridad · Sala COP |
 
-Ambas comparten el mismo mapa (`MapView`), datos (`data.js`) y sistema de diseño
-(`styles.css`), y enlazan entre sí desde su cabecera.
+Ambas apps comparten el mismo mapa (`MapH3`), datos (`data.js`) y sistema de
+diseño (`styles.css`), y enlazan entre sí desde su cabecera. La landing explica
+qué hace cada vista y muestra las cifras de las bases reales.
 
-### App ciudadana (`index.html`)
+### App ciudadana (`ciudadano.html`)
 
 - **Mapa de riesgo** sobre **OpenStreetMap** (Leaflet) con **grilla hexagonal H3
   de Uber**: cada hexágono se asigna a su comuna (Voronoi sobre los centroides de
@@ -53,9 +55,12 @@ Ambas comparten el mismo mapa (`MapView`), datos (`data.js`) y sistema de diseñ
 ## Estructura
 
 ```
-index.html          Shell de la app ciudadana
+index.html          Shell de la landing (elige vista)
+ciudadano.html      Shell de la app ciudadana
 gobierno.html       Shell del dashboard gubernamental
 src/
+  home.jsx          Entry de la landing · monta <Landing/>
+  Landing.jsx       Landing — explica y enlaza las dos vistas
   citizen.jsx       Entry de la app ciudadana · monta <CitizenApp/>
   main.jsx          Entry del dashboard · monta <Dashboard App/>
   CitizenApp.jsx    App ciudadana (header, sidebar, mapa, footer, ajustes)

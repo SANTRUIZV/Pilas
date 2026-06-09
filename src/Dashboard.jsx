@@ -64,7 +64,7 @@ function GovHeader({ period, setPeriod, year, setYear, years, status }) {
             <button key={p} className={period === p ? "is-on" : ""} onClick={() => setPeriod(p)}>{p}</button>
           ))}
         </div>
-        <a href="index.html" className="pls-pill" style={{ textDecoration: "none", color: "var(--pls-fg)" }}>
+        <a href="ciudadano.html" className="pls-pill" style={{ textDecoration: "none", color: "var(--pls-fg)" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 12h18M13 5l8 7-8 7"/></svg>
           App ciudadano
         </a>
