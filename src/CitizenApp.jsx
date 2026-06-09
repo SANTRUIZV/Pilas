@@ -241,6 +241,7 @@ function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSele
         hour={hour}
         palette={palette}
         showCAI={layers.cai}
+        showHospitals={layers.hosp}
         routeFrom={routeFrom} routeTo={routeTo} />
       <div className="pls-map-chrome">
         <div className="pls-mode-toggle">

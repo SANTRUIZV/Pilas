@@ -43,6 +43,7 @@ export const api = {
   riskComunas: (hour) => get(`/risk/comunas${q({ hour })}`),
   crimes: () => get("/crimes"),
   cai: () => get("/cai"),
+  hospitals: () => get("/hospitals"),
   reports: () => get("/reports"),
   cuadrantes: () => get("/cuadrantes"),
   // Gobierno
