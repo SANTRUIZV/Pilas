@@ -11,8 +11,11 @@ El modelo se entrena con datos reales de la carpeta `../Bases de datos/`:
 - **`Homologado_formato_largo.xlsx` → hoja «TAB ALCALDÍA 09-19»** — ~170k
   incidentes de Cali (2010–2019) con comuna, hora, día, mes y tipo de delito.
   Es la fuente del modelo de riesgo por **comuna × hora × día × mes**.
-- **`Datos_policía_ubicación_teléfonos.xlsx` → «Limpio»** — ubicaciones reales de
-  CAI/cuadrantes con coordenadas.
+- **`Datos_policía_ubicación_teléfonos.xlsx` → «Hoja3» + «Limpio»** — ubicaciones
+  reales de CAI, estaciones y subestaciones; «Limpio» aporta coordenadas
+  verificadas y unidades nuevas.
+- **`Servicios_salud_habilitados_Cali.xlsx` → «LIMPIO»** — servicios de salud
+  habilitados con urgencias en Cali (45 prestadores geolocalizados con teléfono).
 
 `ml/ingest.py` agrega y limpia estas bases a CSVs; `ml/train.py` entrena el modelo.
 
@@ -108,8 +111,8 @@ backend/
     ingest.py             Bases de datos/*.xlsx → CSVs limpios (malla comuna×hora)
     train.py              Entrenamiento XGBoost (Poisson) + métricas + guardado
     notebook.ipynb        EDA + entrenamiento + SHAP
-    datasets/        CSVs generados por ingest (ignorados por git)
-  models/          Artefactos entrenados (generados; ignorados por git)
+    datasets/        CSVs generados por ingest (versionados para el deploy)
+  models/          Artefactos entrenados (versionados para el deploy)
   requirements.txt
 ```
 
