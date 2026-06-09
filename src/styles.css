@@ -96,10 +96,67 @@ button { font-family: inherit; color: inherit; }
   .pls-hd { padding: 12px 14px !important; }
   .pls-hd-actions .pls-pill:nth-child(2) { display: none; }
 }
+
+/* ── Móvil: de 3 columnas a una sola apilada (mapa → panel contextual →
+   controles). La página entera hace scroll en vez de ocultar paneles. */
 @media (max-width: 820px) {
-  .pls-main { grid-template-columns: 1fr; }
-  .pls-side { display: none; }
-  .pls-rail { display: none; }
+  html, body, #root { height: auto; min-height: 100dvh; }
+  .pls-app { height: auto; min-height: 100dvh; overflow: visible; }
+
+  .pls-main { display: flex; flex-direction: column; }
+  .pls-mapwrap {
+    order: 1;
+    flex: none;
+    height: 56vh;   /* fallback */
+    height: 56dvh;
+    min-height: 300px;
+  }
+  .pls-rail {
+    order: 2;
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid var(--pls-line);
+  }
+  .pls-side {
+    order: 3;
+    border-right: 0;
+    border-top: 1px solid var(--pls-line);
+    overflow: visible;
+  }
+
+  /* Header en dos filas: marca + acciones arriba, navegación abajo. */
+  .pls-hd { grid-template-columns: 1fr auto; gap: 10px 12px; }
+  .pls-nav {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .pls-nav::-webkit-scrollbar { display: none; }
+  .pls-nav button { flex: 1 0 auto; }
+
+  /* Footer ticker desplazable horizontalmente. */
+  .pls-ft { overflow-x: auto; scrollbar-width: none; }
+  .pls-ft::-webkit-scrollbar { display: none; }
+  .pls-ft-item:last-child { margin-left: 0; }
+
+  .pls-kbd { display: none; }
+}
+
+@media (max-width: 480px) {
+  .pls-hd { padding: 10px 12px !important; }
+  .pls-brand-name { font-size: 19px; }
+  .pls-hd-actions .pls-pill strong { display: none; }
+  .pls-panel-title { font-size: 24px !important; }
+  .pls-now-score-n { font-size: 40px !important; }
+  .pls-mapwrap { height: 48vh; height: 48dvh; min-height: 260px; }
+
+  /* Controles flotantes del mapa más compactos y sin solaparse. */
+  .pls-mode-toggle { top: 10px; right: 10px; }
+  .pls-zoom { right: 10px; top: 54px; }
+  .pls-viz-switch { left: 10px; bottom: 72px; }
+  .pls-viz-switch button { padding: 6px 9px; font-size: 11px; }
+  .pls-sos { right: 10px; bottom: 12px; padding: 10px 14px; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

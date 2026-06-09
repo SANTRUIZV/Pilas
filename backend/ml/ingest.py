@@ -5,10 +5,11 @@ Fuente principal: hoja «TAB ALCALDÍA 09-19» de `Homologado_formato_largo.xlsx
 malla (año, comuna, hora, día_semana, mes) que alimenta el modelo de riesgo.
 
 Salidas en `ml/datasets/`:
-  - incidents_cali.csv   año, comuna, hour, weekday, month, count   (modelo de riesgo)
-  - crime_monthly.csv    conflictividad, year, month, count          (tendencias)
-  - comuna_totals.csv    comuna, count                               (tabla de comunas)
-  - cai_locations.csv    name, lat, lon, phone                       (CAI reales)
+  - incidents_cali.csv     año, comuna, hour, weekday, month, count  (modelo de riesgo)
+  - crime_monthly.csv      conflictividad, year, month, count        (tendencias)
+  - comuna_totals.csv      comuna, count                             (tabla de comunas)
+  - cai_locations.csv      name, lat, lon, phone, address            (unidades de Policía)
+  - health_services.csv    name, lat, lon, phone, address            (servicios de salud)
 
 Uso:  python -m ml.ingest
 """
@@ -140,23 +141,41 @@ def ingest_alcaldia():
             w.writerow([comuna, c])
 
 
-def ingest_cai():
-    path = _find("polic")
-    wb = load_workbook(path, read_only=True, data_only=True)
-    # «Hoja3» es el set geolocalizado más completo (CAI + estaciones +
-    # subestaciones, con dirección); «Limpio» es un subconjunto. Preferimos Hoja3.
-    sheet = None
-    for cand in ("hoja3", "limpio"):
+def _parse_coords(lat_v, lon_v):
+    """Coordenadas en dos celdas numéricas (a veces sin punto decimal: 34191 →
+    3.4191) o combinadas como «lat, lon» en una sola celda (hoja «Limpio»).
+    Devuelve (lat, lon) validado contra el área de Cali, o None."""
+    if isinstance(lat_v, str) and "," in lat_v:
+        parts = lat_v.split(",")
         try:
-            sheet = _sheet(wb, cand)
-            break
-        except KeyError:
-            continue
-    if sheet is None:
-        wb.close()
-        print("· Ubicaciones: hoja geolocalizada no encontrada; omitido")
-        return
-    ws = wb[sheet]
+            lat, lon = float(parts[0]), float(parts[1])
+        except (IndexError, ValueError):
+            return None
+    else:
+        try:
+            lat, lon = float(lat_v), float(lon_v)
+        except (TypeError, ValueError):
+            return None
+    if abs(lat) > 90:
+        lat /= 10000.0
+    if abs(lon) > 180:
+        lon /= 10000.0
+    if not (3.2 <= lat <= 3.6 and -77.2 <= lon <= -76.2):
+        return None
+    return round(lat, 5), round(lon, 5)
+
+
+def _phone(v) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, float):
+        return str(int(v))
+    s = str(v).strip()
+    return "" if s.upper() in {"#N/A", "N/A", "NA", "NONE"} else s
+
+
+def _read_units(ws):
+    """Lee una hoja geolocalizada de unidades → [{name, lat, lon, phone, address}]."""
     rows = ws.iter_rows(values_only=True)
     header = [(_norm(h) if h is not None else "") for h in next(rows)]
 
@@ -171,40 +190,145 @@ def ingest_cai():
     i_lat, i_lon = col("latitud"), col("longitud")
     i_tel = col("telefono")
     i_addr = col("direcci", "referencia")  # "direcci" tolera mojibake en la cabecera
-    out = []
-    skipped = 0
+    out, skipped = [], 0
+    if i_name is None or i_lat is None:
+        return out, skipped
     for r in rows:
-        if i_lat is None or i_lon is None:
-            break
         if not any(c is not None for c in r):
             continue
+        coords = _parse_coords(r[i_lat], r[i_lon] if i_lon is not None else None)
+        if coords is None:
+            skipped += 1
+            continue
+        addr = str(r[i_addr]).strip() if i_addr is not None and r[i_addr] is not None else ""
+        if _parse_coords(addr, None):  # dirección rellenada con coordenadas → descartarla
+            addr = ""
+        out.append({
+            "name": str(r[i_name]).strip() if r[i_name] is not None else "",
+            "lat": coords[0], "lon": coords[1],
+            "phone": _phone(r[i_tel]) if i_tel is not None else "",
+            "address": addr,
+        })
+    return out, skipped
+
+
+def ingest_cai():
+    """«Hoja3» es el set geolocalizado más completo (CAI + estaciones +
+    subestaciones, con dirección); la hoja «Limpio» trae coordenadas verificadas
+    (más precisas) y unidades nuevas. Partimos de Hoja3 y sobreescribimos /
+    añadimos con «Limpio», casando por nombre normalizado."""
+    path = _find("polic")
+    wb = load_workbook(path, read_only=True, data_only=True)
+
+    def key(name: str) -> str:
+        return " ".join(_norm(name).split())
+
+    units: dict[str, dict] = {}
+    order: list[str] = []
+    skipped = 0
+    found = []
+    for cand in ("hoja3", "limpio"):
         try:
-            lat, lon = float(r[i_lat]), float(r[i_lon])
-        except (TypeError, ValueError):
-            skipped += 1
+            sheet = _sheet(wb, cand)
+        except KeyError:
             continue
-        # La fuente guardó las coordenadas sin punto decimal (p. ej. 34191 →
-        # 3.4191, -765133 → -76.5133). Normalizamos y validamos contra el área de Cali.
-        if abs(lat) > 90:
-            lat /= 10000.0
-        if abs(lon) > 180:
-            lon /= 10000.0
-        if not (3.2 <= lat <= 3.6 and -77.2 <= lon <= -76.2):
-            skipped += 1
-            continue
-        out.append([
-            str(r[i_name]).strip() if i_name is not None and r[i_name] is not None else "",
-            round(lat, 5), round(lon, 5),
-            r[i_tel] if i_tel is not None else "",
-            str(r[i_addr]).strip() if i_addr is not None and r[i_addr] is not None else "",
-        ])
+        found.append(sheet)
+        rows, sk = _read_units(wb[sheet])
+        skipped += sk
+        for u in rows:
+            k = key(u["name"])
+            if k in units:
+                prev = units[k]
+                prev["lat"], prev["lon"] = u["lat"], u["lon"]
+                if u["phone"]:
+                    prev["phone"] = u["phone"]
+                if u["address"]:
+                    prev["address"] = u["address"]
+            else:
+                units[k] = u
+                order.append(k)
     wb.close()
+    if not found:
+        print("· Ubicaciones: hoja geolocalizada no encontrada; omitido")
+        return
 
     with open(DATA_DIR / "cai_locations.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["name", "lat", "lon", "phone", "address"])
+        for k in order:
+            u = units[k]
+            w.writerow([u["name"], u["lat"], u["lon"], u["phone"], u["address"]])
+    print(f"· Unidades de Policía (hojas «{'» + «'.join(found)}»): {len(order):,} geolocalizadas ({skipped} descartadas)")
+
+
+# Tokens que se conservan en mayúsculas al embellecer nombres de prestadores.
+_KEEP_UPPER = {"IPS", "EPS", "ESE", "E.S.E.", "E.S.E", "SAS", "S.A.S", "S.A.S.", "S.A",
+               "S.A.", "S.A.M.U.", "LTDA", "UBA", "AIP", "CEM", "II", "III"}
+_LOWER = {"de", "del", "y", "al", "con", "en", "a"}
+_ACCENTS = {"clinica": "Clínica", "fundacion": "Fundación", "medico": "Médico",
+            "medica": "Médica", "atencion": "Atención", "psiquiatrico": "Psiquiátrico"}
+
+
+def _pretty(name: str) -> str:
+    """«FUNDACION VALLE DEL LILI» → «Fundación Valle del Lili»."""
+    out = []
+    for w in str(name).split():
+        if w.upper() in _KEEP_UPPER:
+            out.append(w.upper())
+        elif w.lower() in _ACCENTS:
+            out.append(_ACCENTS[w.lower()])
+        elif w.lower() in _LOWER and out:
+            out.append(w.lower())
+        else:
+            out.append(w.capitalize())
+    return " ".join(out)
+
+
+def ingest_salud():
+    """Servicios de salud habilitados con urgencias en Cali (hoja «LIMPIO» del
+    Excel de servicios habilitados): nombre, coordenadas, teléfono y dirección."""
+    try:
+        path = _find("salud")
+    except FileNotFoundError:
+        print("· Salud: xlsx de servicios habilitados no encontrado; omitido")
+        return
+    wb = load_workbook(path, read_only=True, data_only=True)
+    ws = wb[_sheet(wb, "limpio")]
+    rows = ws.iter_rows(values_only=True)
+    header = [(_norm(h) if h is not None else "") for h in next(rows)]
+
+    def col(*names):
+        for n in names:
+            for i, h in enumerate(header):
+                if n in h:
+                    return i
+        return None
+
+    i_name = col("servicio", "nombre")
+    i_lat, i_lon = col("latitud"), col("longitud")
+    i_tel = col("telefono")
+    i_addr = col("direcci", "columna")  # la dirección quedó en «Columna1»
+    out, skipped = [], 0
+    for r in rows:
+        if not any(c is not None for c in r):
+            continue
+        coords = _parse_coords(r[i_lat], r[i_lon] if i_lon is not None else None)
+        if coords is None:
+            skipped += 1
+            continue
+        out.append([
+            _pretty(r[i_name]) if r[i_name] is not None else "",
+            coords[0], coords[1],
+            _phone(r[i_tel]) if i_tel is not None else "",
+            str(r[i_addr]).strip() if i_addr is not None and r[i_addr] is not None else "",
+        ])
+    wb.close()
+
+    with open(DATA_DIR / "health_services.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["name", "lat", "lon", "phone", "address"])
         w.writerows(out)
-    print(f"· Unidades de Policía (hoja «{sheet}»): {len(out):,} geolocalizadas ({skipped} descartadas)")
+    print(f"· Servicios de salud (hoja «LIMPIO»): {len(out):,} geolocalizados ({skipped} descartados)")
 
 
 def ingest_cuadrantes():
@@ -278,6 +402,7 @@ def main():
     ingest_alcaldia()
     ingest_cai()
     ingest_cuadrantes()
+    ingest_salud()
     print(f"✓ CSVs en {DATA_DIR}")
 
 

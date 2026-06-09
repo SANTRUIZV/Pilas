@@ -150,12 +150,51 @@ def _load_cuadrantes() -> list[dict]:
 
 CUADRANTES = _load_cuadrantes()
 
-HOSPITALS = [
+# Hospitales sintéticos (respaldo si no están los datos reales ingeridos).
+_HOSPITALS_SYNTHETIC = [
     {"id": "h-valle",     "name": "HU del Valle",             "lat": 3.434, "lon": -76.531},
     {"id": "h-imbanaco",  "name": "Clínica Imbanaco",         "lat": 3.420, "lon": -76.541},
     {"id": "h-fundacion", "name": "Fundación Valle del Lili", "lat": 3.353, "lon": -76.531},
     {"id": "h-versalles", "name": "Clínica Versalles",        "lat": 3.467, "lon": -76.532},
 ]
+
+
+def _load_health_services() -> list[dict]:
+    """Servicios de salud habilitados con urgencias en Cali, de
+    ml/datasets/health_services.csv (ingerido del Excel de servicios de salud
+    habilitados, hoja «LIMPIO»). Lista vacía si no existe el CSV."""
+    import csv
+    from .config import DATA_DIR
+
+    path = DATA_DIR / "health_services.csv"
+    if not path.exists():
+        return []
+    out: list[dict] = []
+    seen = set()
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            try:
+                lat, lon = float(row["lat"]), float(row["lon"])
+            except (KeyError, ValueError):
+                continue
+            name = (row.get("name") or "").strip()
+            hid = "h-" + (_slug(name) or str(len(out)))
+            if hid in seen:
+                hid = f"{hid}-{len(out)}"
+            seen.add(hid)
+            out.append({
+                "id": hid,
+                "name": name,
+                "lat": lat,
+                "lon": lon,
+                "phone": (row.get("phone") or "").strip(),
+                "address": (row.get("address") or "").strip(),
+            })
+    return out
+
+
+# Servicios de salud reales si están disponibles; si no, los sintéticos.
+HOSPITALS = _load_health_services() or _HOSPITALS_SYNTHETIC
 
 TOURISM = [
     {"id": "cristo-rey",    "name": "Cristo Rey",              "lat": 3.434, "lon": -76.567, "tip": "Visita antes de 5 pm; ruta de subida segura por Pance."},
