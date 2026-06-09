@@ -49,7 +49,7 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
 .gov-hd-actions .pls-pill { white-space: nowrap; }
 
 @media (max-width: 1180px) {
-  .gov-hd { grid-template-columns: auto auto 1fr auto; }
+  .gov-hd { display: flex; flex-wrap: wrap; justify-content: space-between; }
   .gov-hd-org { display: none; }
 }
 
@@ -592,8 +592,8 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
 
 @media (max-width: 1400px) {
   .gov-kpis { grid-template-columns: repeat(3, 1fr); }
-  .gov-kpi:nth-child(3) { border-right: 0; }
   .gov-kpi { border-bottom: 1px solid var(--pls-line); }
+  .gov-kpi:nth-child(3n) { border-right: 0; }
   .gov-kpi-v { font-size: 30px; }
   .gov-main { grid-template-columns: 1fr 320px; }
 }
@@ -601,8 +601,47 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
   .gov-main { grid-template-columns: 1fr 300px; }
   .gov-series { grid-template-columns: 180px 1fr; }
 }
+
+/* ── Tablet/móvil: una sola columna. El rail (alertas, patrullas, actividad,
+   cuadrantes) se apila debajo del centro en vez de ocultarse. */
 @media (max-width: 900px) {
   .gov-main { grid-template-columns: 1fr; }
-  .gov-rail { display: none; }
+  .gov-center { border-right: 0; }
+  .gov-rail {
+    position: static;
+    max-height: none;
+    border-left: 0;
+    border-top: 1px solid var(--pls-line);
+  }
+  .gov-rail-body { overflow: visible; }
+
   .gov-kpis { grid-template-columns: repeat(2, 1fr); }
+  .gov-kpi:nth-child(3n) { border-right: 1px solid var(--pls-line); }
+  .gov-kpi:nth-child(2n) { border-right: 0; }
+
+  .gov-map-block { height: 380px; }
+  .gov-series { grid-template-columns: 1fr; }
+  .gov-series-chart { min-height: 220px; }
+}
+
+@media (max-width: 760px) {
+  .gov-hd { padding: 10px 14px; }
+  .gov-hd-actions { width: 100%; flex-wrap: wrap; }
+  .gov-map-block { height: 320px; }
+  .gov-kpi { padding: 12px 14px 14px; }
+  .gov-kpi-v { font-size: 26px; }
+  .gov-rail-tabs { overflow-x: auto; scrollbar-width: none; }
+  .gov-rail-tabs::-webkit-scrollbar { display: none; }
+  .gov-rail-tabs button { flex: 1 0 auto; padding: 12px 10px; }
+  .gov-series { padding: 14px 14px 18px; }
+  .gov-table-wrap { padding: 12px 14px; }
+  /* El ticker deja de ser sticky para no comer pantalla en móvil. */
+  .gov-app .pls-ft { position: static; }
+}
+
+@media (max-width: 480px) {
+  .gov-kpi-v { font-size: 22px; }
+  .gov-kpi-spark { display: none; }
+  .gov-map-block { height: 280px; }
+  .gov-map-overlay { top: 10px; left: 10px; padding: 8px 10px; }
 }
