@@ -108,7 +108,7 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
           <div className="pls-now-top">
             <div className="pls-now-loc">
               {currentZone?.name || "Cali"}
-              <small>{currentZone?.comuna} · {currentZone?.pop}</small>
+              <small>{currentZone ? `${currentZone.comuna} · ${currentZone.pop}` : "Toca una comuna en el mapa"}</small>
             </div>
             <div className="pls-now-time">{String(hour).padStart(2, "0")}:00</div>
           </div>
@@ -269,8 +269,12 @@ function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSele
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [screen, setScreen] = useState("map");
-  const [hour, setHour] = useState(19);
-  const [selectedZoneId, setSelectedZoneId] = useState("san-antonio");
+  // Arranca en la hora actual del dispositivo (9:20 → 9); el slider sigue
+  // permitiendo moverla a cualquier hora.
+  const [hour, setHour] = useState(() => new Date().getHours());
+  // Sin zona preseleccionada: el rail derecho muestra el Pulso de la ciudad
+  // hasta que el usuario toque una comuna en el mapa.
+  const [selectedZoneId, setSelectedZoneId] = useState(null);
   const [routeFrom, setRouteFrom] = useState(null);
   const [routeTo, setRouteTo] = useState(null);
   const [layers, setLayers] = useState({ cai: true, hosp: false, reports: true });
