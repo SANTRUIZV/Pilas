@@ -25,6 +25,19 @@ export const ZONES = [
   { id: "floralia",      name: "Floralia",      comuna: "Comuna 6",  baseRisk: 46, pop: "Norte",        lat: 3.493, lon: -76.510, tags: ["residencial"] },
   { id: "la-flora",      name: "La Flora",      comuna: "Comuna 2",  baseRisk: 24, pop: "Norte",        lat: 3.482, lon: -76.524, tags: ["residencial"] },
   { id: "tequendama",    name: "Tequendama",    comuna: "Comuna 9",  baseRisk: 32, pop: "Sur",          lat: 3.437, lon: -76.541, tags: ["clínicas"] },
+  // Zonas representativas de las comunas restantes, para que TODAS las comunas
+  // del mapa H3 sean seleccionables (el clic abre el detalle vía ZONE_BY_COMUNA).
+  // Coordenadas = punto-etiqueta de la comuna (dentro del polígono real, IDESC).
+  { id: "salomia",       name: "Salomia",       comuna: "Comuna 4",  baseRisk: 45, pop: "Norte",         lat: 3.46955, lon: -76.5093,  tags: ["residencial", "industrial"] },
+  { id: "chiminangos",   name: "Chiminangos",   comuna: "Comuna 5",  baseRisk: 42, pop: "Noreste",       lat: 3.47203, lon: -76.49531, tags: ["residencial"] },
+  { id: "alfonso-lopez", name: "Alfonso López", comuna: "Comuna 7",  baseRisk: 55, pop: "Oriente",       lat: 3.45643, lon: -76.48821, tags: ["popular", "ribera"] },
+  { id: "las-americas",  name: "Las Américas",  comuna: "Comuna 8",  baseRisk: 48, pop: "Centro-Oriente",lat: 3.44634, lon: -76.50598, tags: ["residencial", "comercial"] },
+  { id: "el-dorado",     name: "El Dorado",     comuna: "Comuna 10", baseRisk: 44, pop: "Sur-Centro",    lat: 3.41923, lon: -76.52767, tags: ["residencial"] },
+  { id: "la-esperanza",  name: "La Esperanza",  comuna: "Comuna 11", baseRisk: 50, pop: "Oriente",       lat: 3.42303, lon: -76.51473, tags: ["residencial", "popular"] },
+  { id: "doce-octubre",  name: "Doce de Octubre", comuna: "Comuna 12", baseRisk: 50, pop: "Oriente",     lat: 3.43453, lon: -76.50182, tags: ["popular"] },
+  { id: "el-retiro",     name: "El Retiro",     comuna: "Comuna 15", baseRisk: 66, pop: "Oriente",       lat: 3.40485, lon: -76.50046, tags: ["distrito", "popular"] },
+  { id: "el-lido",       name: "El Lido",       comuna: "Comuna 19", baseRisk: 34, pop: "Sur",           lat: 3.42074, lon: -76.54644, tags: ["residencial", "deportivo"] },
+  { id: "desepaz",       name: "Pizamos · Desepaz", comuna: "Comuna 21", baseRisk: 58, pop: "Oriente",   lat: 3.42463, lon: -76.46574, tags: ["popular"] },
 ];
 
 // Time-of-day risk modifiers (multiplier)
