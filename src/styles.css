@@ -792,6 +792,35 @@ button { font-family: inherit; color: inherit; }
 .pls-crime-trend.is-down { color: var(--pls-safe); }
 .pls-crime-trend.is-up   { color: var(--pls-accent); }
 
+/* ¿Por qué este riesgo? (explicabilidad del modelo) */
+.pls-factors { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.pls-factors li {
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 12.5px;
+  padding: 4px 0;
+}
+.pls-factor-label { color: var(--pls-fg); }
+.pls-factor-bar {
+  position: relative;
+  height: 6px;
+  background: var(--pls-line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pls-factor-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  border-radius: 3px;
+}
+.pls-factor-fill.is-up   { background: var(--pls-accent); }
+.pls-factor-fill.is-down { background: var(--pls-safe); }
+.pls-factor-dir { font-family: var(--pls-mono); font-size: 11px; }
+.pls-factor-dir.is-up   { color: var(--pls-accent); }
+.pls-factor-dir.is-down { color: var(--pls-safe); }
+.pls-factor-note { margin-top: 6px; font-size: 11px; color: var(--pls-fg-faint); font-family: var(--pls-mono); }
+
 .pls-services { display: flex; flex-direction: column; gap: 8px; }
 .pls-service {
   display: flex;

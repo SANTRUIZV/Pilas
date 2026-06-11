@@ -92,6 +92,8 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
   const zone = ZONES.find(z => z.id === zoneId);
   // Detalle real desde el API (riesgo, curva 24h, servicios, recomendaciones).
   const { data: detail, live } = useApiData(() => api.zoneDetail(zoneId, hour), null, [zoneId, hour]);
+  // Explicación del modelo (solo si hay XGBoost detrás; en modo demo queda null).
+  const { data: explain } = useApiData(() => api.riskExplain(zoneId, hour), null, [zoneId, hour]);
   if (!zone) return null;
 
   function distKm(a, b) {
@@ -164,6 +166,32 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
           ))}
         </ul>
       </div>
+
+      {explain?.factors?.length > 0 && (
+        <div className="pls-section">
+          <div className="pls-section-h">¿Por qué este riesgo?</div>
+          <ul className="pls-factors">
+            {(() => {
+              const max = Math.max(...explain.factors.map(f => Math.abs(f.impact))) || 1;
+              return explain.factors.map(f => (
+                <li key={f.factor}>
+                  <span className="pls-factor-label">{f.label}</span>
+                  <span className="pls-factor-bar">
+                    <span
+                      className={"pls-factor-fill " + (f.impact > 0 ? "is-up" : "is-down")}
+                      style={{ width: Math.max(6, Math.abs(f.impact) / max * 100) + "%" }}
+                    ></span>
+                  </span>
+                  <span className={"pls-factor-dir " + (f.impact > 0 ? "is-up" : "is-down")}>
+                    {f.impact > 0 ? "▲ sube" : "▼ baja"}
+                  </span>
+                </li>
+              ));
+            })()}
+          </ul>
+          <div className="pls-factor-note">Según el modelo, para esta zona a las {String(hour).padStart(2, "0")}:00</div>
+        </div>
+      )}
 
       <div className="pls-section">
         <div className="pls-section-h">{tourist ? "Si vienes de visita" : "Recomendaciones Pilas"}</div>
