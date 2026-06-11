@@ -5,7 +5,7 @@ Fuente principal: hoja «TAB ALCALDÍA 09-19» de `Homologado_formato_largo.xlsx
 malla (año, comuna, hora, día_semana, mes) que alimenta el modelo de riesgo.
 
 Salidas en `ml/datasets/`:
-  - incidents_cali.csv     año, comuna, hour, weekday, month, count  (modelo de riesgo)
+  - incidents_cali.csv     año, comuna, hour, weekday, month, is_holiday, count  (modelo de riesgo)
   - crime_monthly.csv      conflictividad, year, month, count        (tendencias)
   - comuna_totals.csv      comuna, count                             (tabla de comunas)
   - cai_locations.csv      name, lat, lon, phone, address            (unidades de Policía)
@@ -23,6 +23,7 @@ from datetime import datetime, time
 from openpyxl import load_workbook
 
 from app.config import BASE_DIR, DATA_DIR
+from app.holidays import is_holiday
 
 DB_DIR = BASE_DIR.parent / "Bases de datos"
 
@@ -89,7 +90,7 @@ def ingest_alcaldia():
     header = list(next(rows))
     ix = {h: i for i, h in enumerate(header)}
 
-    grid = defaultdict(int)            # (year, comuna, hour, weekday, month) -> count
+    grid = defaultdict(int)            # (year, comuna, hour, weekday, month, holiday) -> count
     crime_monthly = defaultdict(int)   # (conflictividad, year, month) -> count
     comuna_totals = Counter()          # comuna -> count
     seen = kept = 0
@@ -111,7 +112,9 @@ def ingest_alcaldia():
         qty = r[ix["CANTIDAD"]]
         qty = int(qty) if isinstance(qty, (int, float)) else 1
 
-        grid[(year, comuna, hour, weekday, month)] += qty
+        fecha = r[ix["FECHA_HECHO"]]
+        holiday = 1 if isinstance(fecha, datetime) and is_holiday(fecha.date()) else 0
+        grid[(year, comuna, hour, weekday, month, holiday)] += qty
         comuna_totals[comuna] += qty
         conf = str(r[ix["CONFLICTIVIDAD"]]).strip()
         crime_monthly[(conf, year, month)] += qty
@@ -124,9 +127,9 @@ def ingest_alcaldia():
 
     with open(DATA_DIR / "incidents_cali.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["year", "comuna", "hour", "weekday", "month", "count"])
-        for (year, comuna, hour, weekday, month), c in sorted(grid.items()):
-            w.writerow([year, comuna, hour, weekday, month, c])
+        w.writerow(["year", "comuna", "hour", "weekday", "month", "is_holiday", "count"])
+        for (year, comuna, hour, weekday, month, holiday), c in sorted(grid.items()):
+            w.writerow([year, comuna, hour, weekday, month, holiday, c])
 
     with open(DATA_DIR / "crime_monthly.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)

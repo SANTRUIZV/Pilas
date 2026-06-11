@@ -10,7 +10,7 @@ import json
 import threading
 from datetime import datetime
 
-from . import config, data, features
+from . import config, data, features, holidays
 
 
 class RiskModel:
@@ -69,7 +69,9 @@ class RiskModel:
         when = (dt or datetime.now()).replace(hour=hour, minute=0, second=0, microsecond=0)
         comuna = data.comuna_number(zone)
         if self.is_loaded and comuna is not None:
-            feats = features.make_features(comuna, hour, when.weekday(), when.month)
+            feats = features.make_features(
+                comuna, hour, when.weekday(), when.month, holidays.is_holiday(when.date())
+            )
             pred = max(0.0, self._predict_count(feats))
             norm = (pred - self._risk_lo) / (self._risk_hi - self._risk_lo)
             risk = max(0, min(100, round(norm * 100)))
@@ -82,6 +84,55 @@ class RiskModel:
             "level": data.risk_class(risk),
             "label": data.risk_label(risk),
             "source": source,
+        }
+
+    # ── Explicabilidad (SHAP nativo de XGBoost) ─────────────────────────────
+    # Etiquetas legibles por feature; las parejas sin/cos se agregan en un solo
+    # factor para que la explicación tenga sentido para el usuario final.
+    _FACTOR_GROUPS = {
+        "comuna": ("comuna", "La comuna donde estás"),
+        "hour_sin": ("hora", "La hora del día"),
+        "hour_cos": ("hora", "La hora del día"),
+        "weekday": ("dia_semana", "El día de la semana"),
+        "is_weekend": ("fin_de_semana", "Ser fin de semana"),
+        "month_sin": ("mes", "La época del año"),
+        "month_cos": ("mes", "La época del año"),
+        "is_holiday": ("festivo", "Ser día festivo"),
+    }
+
+    def explain(self, zone: dict, hour: int, dt: datetime | None = None) -> dict | None:
+        """Contribución de cada factor al riesgo (pred_contribs de XGBoost).
+
+        Devuelve los factores ordenados por |impacto| en log-tasa, con signo:
+        positivo = sube el riesgo, negativo = lo baja. None si el modelo no está
+        cargado o la zona no tiene comuna.
+        """
+        when = (dt or datetime.now()).replace(hour=hour, minute=0, second=0, microsecond=0)
+        comuna = data.comuna_number(zone)
+        if not self.is_loaded or comuna is None:
+            return None
+        import numpy as np
+        import xgboost as xgb
+
+        feats = features.make_features(
+            comuna, hour, when.weekday(), when.month, holidays.is_holiday(when.date())
+        )
+        dm = xgb.DMatrix(np.asarray([feats], dtype=float), feature_names=features.FEATURE_NAMES)
+        contribs = self._booster.predict(dm, pred_contribs=True)[0]  # [n_feats + bias]
+
+        grouped: dict[str, dict] = {}
+        for name, value in zip(features.FEATURE_NAMES, contribs[:-1]):
+            key, label = self._FACTOR_GROUPS[name]
+            g = grouped.setdefault(key, {"factor": key, "label": label, "impact": 0.0})
+            g["impact"] += float(value)
+        factors = sorted(grouped.values(), key=lambda g: abs(g["impact"]), reverse=True)
+        for g in factors:
+            g["impact"] = round(g["impact"], 4)
+            g["direction"] = "sube" if g["impact"] > 0 else "baja"
+        return {
+            "baseline": round(float(contribs[-1]), 4),
+            "factors": factors,
+            **self.score(zone, hour, dt),
         }
 
 

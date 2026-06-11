@@ -101,6 +101,21 @@ def risk_comunas(hour: int = Query(default=None, ge=0, le=23)) -> list[dict]:
     return out
 
 
+@app.get("/risk/explain", tags=["riesgo"])
+def risk_explain(
+    zone_id: str = Query(..., description="ID de zona (p. ej. 'san-antonio')"),
+    hour: int = Query(default=None, ge=0, le=23, description="Hora 0–23; por defecto la hora actual"),
+) -> dict:
+    """Por qué el riesgo es el que es: contribución de cada factor (comuna, hora,
+    día, festivo…) según el modelo. Positivo = sube el riesgo, negativo = lo baja."""
+    zone = _zone_or_404(zone_id)
+    h = datetime.now().hour if hour is None else hour
+    exp = risk_model.explain(zone, h)
+    if exp is None:
+        raise HTTPException(503, "Modelo no disponible (sin explicabilidad en modo analítico)")
+    return {"zone_id": zone["id"], "zone_name": zone["name"], "hour": h, **exp}
+
+
 @app.get("/risk/by-point", response_model=RiskOut, tags=["riesgo"])
 def risk_by_point(
     lat: float = Query(..., ge=-90, le=90),

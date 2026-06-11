@@ -1,7 +1,10 @@
 """Entrena el modelo de riesgo (XGBoost · Poisson) con los datos REALES de la Alcaldía.
 
 - Carga `ml/datasets/incidents_cali.csv` (lo genera `ml/ingest.py`).
-- Features: comuna + hora/día/mes cíclicos (ver `app.features`).
+- Features: comuna + hora/día/mes cíclicos + festivo (ver `app.features`).
+- Offset de exposición Poisson: cada celda agrega un nº distinto de días reales
+  (p. ej. un lunes-festivo de enero ocurre menos veces que un lunes normal), así
+  que se entrena con base_margin = log(n_días) y el modelo predice tasa POR DÍA.
 - Split TEMPORAL: entrena con los años más antiguos, valida con el más reciente.
 - Métricas: MAE, RMSE, ROC-AUC ("celda de alto riesgo") y Precision@K.
 - Guarda el Booster (`models/risk_model.json`) y la meta (`models/model_meta.json`).
@@ -12,7 +15,8 @@ from __future__ import annotations
 
 import itertools
 import json
-from datetime import datetime
+from collections import Counter
+from datetime import date, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -21,6 +25,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, roc_auc_sco
 
 from app import config
 from app.features import FEATURE_NAMES, make_features
+from app.holidays import is_holiday
 
 DATASET = config.DATA_DIR / "incidents_cali.csv"
 
@@ -33,27 +38,60 @@ def _load() -> pd.DataFrame:
     return pd.read_csv(DATASET)
 
 
+def _calendar_days(year: int) -> Counter:
+    """Nº de días reales por (weekday, month, is_holiday) en el calendario del año."""
+    days: Counter = Counter()
+    d = date(year, 1, 1)
+    while d.year == year:
+        days[(d.weekday(), d.month, 1 if is_holiday(d) else 0)] += 1
+        d += timedelta(days=1)
+    return days
+
+
 def _expand_zeros(df: pd.DataFrame) -> pd.DataFrame:
-    """Datos 'solo presencia' → malla completa con ceros explícitos.
+    """Datos 'solo presencia' → malla completa con ceros explícitos + exposición.
 
     La fuente solo registra celdas donde hubo incidentes. Para que el modelo
     aprenda el contraste real (madrugada tranquila vs. noche activa), rellenamos
-    con 0 las combinaciones (año, comuna, hora, día, mes) sin incidentes.
+    con 0 las combinaciones (año, comuna, hora, día, mes, festivo) sin incidentes,
+    pero SOLO las que existen en el calendario (p. ej. no hay martes-festivo en
+    julio). Cada celda lleva su exposición `n_days` (días reales que agrega) para
+    el offset Poisson.
     """
     years = sorted(df["year"].unique())
-    full = pd.DataFrame(
-        itertools.product(years, range(1, 23), range(24), range(7), range(1, 13)),
-        columns=["year", "comuna", "hour", "weekday", "month"],
+    rows = []
+    for y in years:
+        cal = _calendar_days(int(y))
+        for (wd, m, hol), n in sorted(cal.items()):
+            rows.append((y, wd, m, hol, n))
+    cal_df = pd.DataFrame(rows, columns=["year", "weekday", "month", "is_holiday", "n_days"])
+    grid = pd.DataFrame(
+        itertools.product(years, range(1, 23), range(24)),
+        columns=["year", "comuna", "hour"],
     )
-    merged = full.merge(df, on=["year", "comuna", "hour", "weekday", "month"], how="left")
+    full = grid.merge(cal_df, on="year")
+    merged = full.merge(
+        df, on=["year", "comuna", "hour", "weekday", "month", "is_holiday"], how="left"
+    )
     merged["count"] = merged["count"].fillna(0.0)
     return merged
 
 
 def _features_frame(df: pd.DataFrame) -> pd.DataFrame:
-    feats = [make_features(c, h, w, m) for c, h, w, m in
-             zip(df["comuna"], df["hour"], df["weekday"], df["month"])]
+    feats = [make_features(c, h, w, m, bool(hol)) for c, h, w, m, hol in
+             zip(df["comuna"], df["hour"], df["weekday"], df["month"], df["is_holiday"])]
     return pd.DataFrame(feats, columns=FEATURE_NAMES)
+
+
+def _dmatrix(df: pd.DataFrame) -> xgb.DMatrix:
+    """DMatrix con offset de exposición: base_margin = log(n_days)."""
+    dm = xgb.DMatrix(
+        _features_frame(df),
+        label=df["count"].to_numpy(float),
+        feature_names=FEATURE_NAMES,
+    )
+    dm.set_base_margin(np.log(df["n_days"].to_numpy(float)))
+    return dm
 
 
 def main() -> None:
@@ -75,11 +113,11 @@ def main() -> None:
         test_df = df.drop(train_df.index)
         print("  (un solo año) split aleatorio 80/20")
 
-    X_train, y_train = _features_frame(train_df), train_df["count"].to_numpy(float)
-    X_test, y_test = _features_frame(test_df), test_df["count"].to_numpy(float)
+    y_train = train_df["count"].to_numpy(float)
+    y_test = test_df["count"].to_numpy(float)
 
-    dtrain = xgb.DMatrix(X_train, label=y_train, feature_names=FEATURE_NAMES)
-    dtest = xgb.DMatrix(X_test, label=y_test, feature_names=FEATURE_NAMES)
+    dtrain = _dmatrix(train_df)
+    dtest = _dmatrix(test_df)
 
     params = {
         "objective": "count:poisson",
@@ -112,9 +150,11 @@ def main() -> None:
     precision_at_k = float(y_test_bin[top_k].mean())
 
     # Escala de riesgo 0..100 por min–max sobre una malla de referencia completa
-    # (todas las comunas × horas × días × meses), para máximo contraste.
-    ref = [make_features(c, h, w, m)
-           for c in range(1, 23) for h in range(24) for w in range(7) for m in range(1, 13)]
+    # (comunas × horas × días × meses × festivo). Sin base_margin: predicción =
+    # tasa por día (exposición 1), igual que en inferencia.
+    ref = [make_features(c, h, w, m, bool(hol))
+           for c in range(1, 23) for h in range(24) for w in range(7)
+           for m in range(1, 13) for hol in (0, 1)]
     ref_pred = booster.predict(xgb.DMatrix(pd.DataFrame(ref, columns=FEATURE_NAMES), feature_names=FEATURE_NAMES))
     risk_lo = float(np.percentile(ref_pred, 5))
     risk_hi = float(np.percentile(ref_pred, 98))
