@@ -21,10 +21,13 @@ FEATURE_NAMES = [
     "is_weekend",
     "month_sin",
     "month_cos",
+    "is_holiday",
 ]
 
 
-def make_features(comuna: int, hour: int, weekday: int, month: int) -> list[float]:
+def make_features(
+    comuna: int, hour: int, weekday: int, month: int, is_holiday: bool = False
+) -> list[float]:
     """Vector de features en orden FEATURE_NAMES."""
     return [
         float(comuna),
@@ -34,4 +37,5 @@ def make_features(comuna: int, hour: int, weekday: int, month: int) -> list[floa
         1.0 if weekday >= 5 else 0.0,
         math.sin(2 * math.pi * (month - 1) / 12.0),
         math.cos(2 * math.pi * (month - 1) / 12.0),
+        1.0 if is_holiday else 0.0,
     ]

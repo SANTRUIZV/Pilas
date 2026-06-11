@@ -1,7 +1,7 @@
 {
-  "trained_at": "2026-06-04T14:06:10",
+  "trained_at": "2026-06-11T15:23:12",
   "source": "Bases de datos · TAB ALCALDÍA 09-19 (Cali)",
-  "n_cells": 443520,
+  "n_cells": 523776,
   "years": [
     2010,
     2011,
@@ -22,25 +22,27 @@
     "weekday",
     "is_weekend",
     "month_sin",
-    "month_cos"
+    "month_cos",
+    "is_holiday"
   ],
-  "best_iteration": 792,
-  "risk_lo": 0.07178995013237,
-  "risk_hi": 1.0390040874481201,
-  "high_risk_threshold": 1.0,
+  "best_iteration": 798,
+  "risk_lo": 0.00030678269104100764,
+  "risk_hi": 0.16966888308525085,
+  "high_risk_threshold": 0.0,
   "metrics": {
-    "mae": 0.6208,
-    "rmse": 0.9528,
-    "roc_auc": 0.7308,
-    "precision_at_4435": 0.4095
+    "mae": 0.524,
+    "rmse": 0.8726,
+    "roc_auc": 0.7515,
+    "precision_at_5227": 0.7027
   },
   "feature_importance": {
-    "comuna": 18.020618438720703,
-    "hour_sin": 19.4771671295166,
-    "hour_cos": 15.455510139465332,
-    "weekday": 5.339897632598877,
-    "is_weekend": 7.239986896514893,
-    "month_sin": 1.5695521831512451,
-    "month_cos": 1.569934368133545
+    "comuna": 18.941139221191406,
+    "hour_sin": 21.739269256591797,
+    "hour_cos": 17.940467834472656,
+    "weekday": 6.9993133544921875,
+    "is_weekend": 7.198208808898926,
+    "month_sin": 2.776402711868286,
+    "month_cos": 4.907614707946777,
+    "is_holiday": 29.337228775024414
   }
 }
