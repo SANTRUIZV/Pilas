@@ -1,7 +1,7 @@
 {
-  "trained_at": "2026-06-11T15:23:12",
-  "source": "Bases de datos · TAB ALCALDÍA 09-19 (Cali)",
-  "n_cells": 523776,
+  "trained_at": "2026-06-14T20:56:10",
+  "source": "Bases de datos · ALCA SEC UNIDOS 2010-2026 · hurtos (Cali)",
+  "n_cells": 889680,
   "years": [
     2010,
     2011,
@@ -12,9 +12,16 @@
     2016,
     2017,
     2018,
-    2019
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
   ],
-  "test_year": 2018,
+  "test_year": 2025,
   "features": [
     "comuna",
     "hour_sin",
@@ -25,24 +32,24 @@
     "month_cos",
     "is_holiday"
   ],
-  "best_iteration": 798,
-  "risk_lo": 0.00030678269104100764,
-  "risk_hi": 0.16966888308525085,
+  "best_iteration": 799,
+  "risk_lo": 0.009320003911852837,
+  "risk_hi": 0.1532377004623413,
   "high_risk_threshold": 0.0,
   "metrics": {
-    "mae": 0.524,
-    "rmse": 0.8726,
-    "roc_auc": 0.7515,
-    "precision_at_5227": 0.7027
+    "mae": 0.4095,
+    "rmse": 0.667,
+    "roc_auc": 0.7317,
+    "precision_at_5174": 0.6527
   },
   "feature_importance": {
-    "comuna": 18.941139221191406,
-    "hour_sin": 21.739269256591797,
-    "hour_cos": 17.940467834472656,
-    "weekday": 6.9993133544921875,
-    "is_weekend": 7.198208808898926,
-    "month_sin": 2.776402711868286,
-    "month_cos": 4.907614707946777,
-    "is_holiday": 29.337228775024414
+    "comuna": 66.14708709716797,
+    "hour_sin": 7.70322322845459,
+    "hour_cos": 14.596906661987305,
+    "weekday": 7.1666107177734375,
+    "is_weekend": 7.989682197570801,
+    "month_sin": 2.5001637935638428,
+    "month_cos": 2.3546037673950195,
+    "is_holiday": 7.622965335845947
   }
 }

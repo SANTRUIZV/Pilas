@@ -46,6 +46,10 @@ CRIME_LABEL = {
     "delito-sexual": "Delito sexual",
 }
 
+# Franja nocturna (18:00–05:59): el KPI secundario del dashboard, ahora que la
+# base es de hurtos, resalta los hurtos en horario nocturno.
+_NIGHT_HOURS = set(range(18, 24)) | set(range(0, 6))
+
 
 # ── Carga de datos (una sola vez por proceso) ───────────────────────────────
 @lru_cache(maxsize=1)
@@ -55,6 +59,7 @@ def _load_incidents() -> dict | None:
     if not path.exists():
         return None
     by_ymwd: dict[tuple[int, int, int], int] = defaultdict(int)  # (y, m, wd) → count
+    by_ymwd_night: dict[tuple[int, int, int], int] = defaultdict(int)  # (y,m,wd) franja noche
     by_ym: dict[tuple[int, int], int] = defaultdict(int)         # (y, m)     → count
     by_year_comuna: dict[tuple[int, int], int] = defaultdict(int)  # (y, c)   → count
     by_year: dict[int, int] = defaultdict(int)
@@ -63,8 +68,10 @@ def _load_incidents() -> dict | None:
     with open(path, encoding="utf-8") as f:
         for r in csv.DictReader(f):
             y = int(r["year"]); m = int(r["month"]); wd = int(r["weekday"])
-            c = int(r["comuna"]); n = int(r["count"])
+            c = int(r["comuna"]); n = int(r["count"]); h = int(r["hour"])
             by_ymwd[(y, m, wd)] += n
+            if h in _NIGHT_HOURS:
+                by_ymwd_night[(y, m, wd)] += n
             by_ym[(y, m)] += n
             by_year_comuna[(y, c)] += n
             by_year[y] += n
@@ -82,6 +89,7 @@ def _load_incidents() -> dict | None:
     ref_date = date(ref_year, 12, 31) if ref_year else None
     return {
         "by_ymwd": dict(by_ymwd),
+        "by_ymwd_night": dict(by_ymwd_night),
         "by_ym": dict(by_ym),
         "by_year_comuna": dict(by_year_comuna),
         "by_year": dict(by_year),
@@ -114,6 +122,17 @@ def _load_monthly() -> dict | None:
 
 def is_ready() -> bool:
     return _load_incidents() is not None and _load_monthly() is not None
+
+
+def available_crime_ids() -> list[str]:
+    """Ids de delito con datos reales en crime_monthly, en el orden de CRIME_LABEL.
+    La base consolidada es de hurtos, así que normalmente solo «hurto-personas»;
+    evita que el dashboard muestre series planas en cero para delitos ausentes."""
+    monthly = _load_monthly()
+    if not monthly:
+        return []
+    present = {CRIME_ID_BY_CONFLICTIVIDAD.get(k) for k in monthly["by_k"]}
+    return [cid for cid in CRIME_LABEL if cid in present]
 
 
 def reference_date() -> date | None:
@@ -170,6 +189,17 @@ def daily_count(d: date) -> float:
     return total / max(1, _weekdays_in_month(d.year, d.month, d.weekday()))
 
 
+def daily_count_night(d: date) -> float:
+    """Como `daily_count` pero solo hurtos en franja nocturna (18:00–05:59)."""
+    data = _load_incidents()
+    if not data:
+        return 0.0
+    total = data["by_ymwd_night"].get((d.year, d.month, d.weekday()), 0)
+    if total == 0:
+        return 0.0
+    return total / max(1, _weekdays_in_month(d.year, d.month, d.weekday()))
+
+
 def daily_count_by_crime(d: date, crime_id: str) -> float:
     """Reparte el conteo mensual del delito entre los días del mes (uniforme),
     luego ajusta por el patrón weekday/total del dataset agregado para que los
@@ -219,11 +249,12 @@ def kpi_payload(roc_auc: float | None = None, year: int | None = None) -> dict:
     prev7 = sum(daily_count(d) for d in _date_range(prev_ref, 7)) if prev_ref else 0
     inc_delta = ((last7 - prev7) / prev7 * 100) if prev7 > 0 else 0.0
 
-    # KPI secundario = Homicidios (lo más relevante para una secretaría de
-    # seguridad). Hurto de celular no existe en el dataset histórico.
-    cel_last7 = sum(daily_count_by_crime(d, "homicidio") for d in _date_range(ref, 7))
-    cel_prev7 = sum(daily_count_by_crime(d, "homicidio") for d in _date_range(prev_ref, 7)) if prev_ref else 0
-    cel_delta = ((cel_last7 - cel_prev7) / cel_prev7 * 100) if cel_prev7 > 0 else 0.0
+    # KPI secundario = Hurtos en franja nocturna (18:00–05:59). La base es de
+    # hurtos, así que el corte nocturno es lo más accionable para la secretaría
+    # (despliegue de patrullas en horario crítico).
+    night_last7 = sum(daily_count_night(d) for d in _date_range(ref, 7))
+    night_prev7 = sum(daily_count_night(d) for d in _date_range(prev_ref, 7)) if prev_ref else 0
+    night_delta = ((night_last7 - night_prev7) / night_prev7 * 100) if night_prev7 > 0 else 0.0
 
     # Precisión: ROC-AUC del modelo (si está disponible) escalado a %, con un
     # delta vs el ROC-AUC de referencia teórico (0.70).
@@ -232,7 +263,7 @@ def kpi_payload(roc_auc: float | None = None, year: int | None = None) -> dict:
 
     # Sparks: 14 días reales para 3 series.
     spark_inc = [{"v": round(daily_count(d), 1)} for d in _date_range(ref, 14)]
-    spark_les = [{"v": round(daily_count_by_crime(d, "homicidio"), 2)} for d in _date_range(ref, 14)]
+    spark_night = [{"v": round(daily_count_night(d), 1)} for d in _date_range(ref, 14)]
     # Spark de precisión: pequeña variación alrededor del ROC-AUC actual.
     base = roc_auc or 0.73
     spark_acc = [{"v": round((base + math.sin(i / 2.0) * 0.012) * 100, 2)} for i in range(14)]
@@ -245,9 +276,9 @@ def kpi_payload(roc_auc: float | None = None, year: int | None = None) -> dict:
         "previousYear": prev_year,
         "incidents7d": round(last7),
         "incidentsDelta": round(inc_delta, 1),
-        "secondaryLabel": "Homicidios · 7d",
-        "secondary7d": round(cel_last7),
-        "secondaryDelta": round(cel_delta, 1),
+        "secondaryLabel": "Hurtos nocturnos · 7d",
+        "secondary7d": round(night_last7),
+        "secondaryDelta": round(night_delta, 1),
         "predAccuracy": round(acc, 1),
         "accuracyDelta": round(acc_delta, 1),
         "activeAlerts": len(alerts),
@@ -258,7 +289,7 @@ def kpi_payload(roc_auc: float | None = None, year: int | None = None) -> dict:
         "responseDelta": -1.2,
         "sparks": {
             "incidents": spark_inc,
-            "secondary": spark_les,
+            "secondary": spark_night,
             "accuracy": spark_acc,
         },
         "referenceDate": ref.isoformat() if ref else None,
@@ -275,7 +306,7 @@ def series_payload(days: int = 90, crime_ids: list[str] | None = None,
     if not is_ready():
         return {}
     ref, _ = _resolve_ref(year)
-    ids = crime_ids or list(CRIME_LABEL.keys())
+    ids = crime_ids or available_crime_ids() or list(CRIME_LABEL.keys())
     out: dict[str, list[dict]] = {}
     for cid in ids:
         out[cid] = [

@@ -224,12 +224,21 @@ function SeriesBlock({ period, year }) {
   );
   const seriesData = payload?.series || DAILY;
 
+  // Solo delitos con datos reales en el backend (la base es de hurtos →
+  // normalmente solo "hurto-personas"); en modo demo (DAILY) están los 6. Evita
+  // mostrar series planas en cero.
+  const shown = CRIMES.filter(c => (seriesData[c.id]?.length || 0) > 0);
+  const shownIds = shown.map(c => c.id);
+  const activeIds = active.filter(id => shownIds.includes(id));
+  const effectiveActive = activeIds.length ? activeIds : shownIds;
+
   function toggle(id) {
     setActive(a => a.includes(id) ? (a.length > 1 ? a.filter(x => x !== id) : a) : [...a, id]);
   }
 
   // Totales últimos 7 días del periodo cargado, por delito (para la sidebar).
-  const totals = CRIMES.map((c, i) => {
+  const totals = shown.map((c) => {
+    const i = CRIMES.findIndex(x => x.id === c.id);
     const arr = seriesData[c.id] || [];
     const last7 = arr.slice(-7).reduce((s, d) => s + d.v, 0);
     return { ...c, color: colors[i], last7: Math.round(last7) };
@@ -248,8 +257,8 @@ function SeriesBlock({ period, year }) {
         </div>
         <ul className="gov-crime-list">
           {totals.map(c => (
-            <li key={c.id} className={active.includes(c.id) ? "is-on" : ""} onClick={() => toggle(c.id)}>
-              <span className="dot" style={{ background: c.color, opacity: active.includes(c.id) ? 1 : 0.25 }}></span>
+            <li key={c.id} className={effectiveActive.includes(c.id) ? "is-on" : ""} onClick={() => toggle(c.id)}>
+              <span className="dot" style={{ background: c.color, opacity: effectiveActive.includes(c.id) ? 1 : 0.25 }}></span>
               <span>{c.label}</span>
               <span className="v">{c.last7}</span>
             </li>
@@ -257,7 +266,7 @@ function SeriesBlock({ period, year }) {
         </ul>
       </div>
       <div className="gov-series-chart">
-        <TimeSeries activeIds={active} seriesData={seriesData} />
+        <TimeSeries activeIds={effectiveActive} seriesData={seriesData} />
       </div>
     </div>
   );

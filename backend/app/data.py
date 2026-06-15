@@ -382,8 +382,8 @@ def _load_comuna_totals() -> dict[int, int]:
     return out
 
 
-# Años cubiertos por la base de la Alcaldía (2010–2019).
-_DATA_YEARS = 10
+# Años cubiertos por la base de hurtos de la Alcaldía (2010–2026).
+_DATA_YEARS = 17
 
 
 @lru_cache(maxsize=1)

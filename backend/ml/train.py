@@ -95,6 +95,12 @@ def _dmatrix(df: pd.DataFrame) -> xgb.DMatrix:
 
 
 def main() -> None:
+    # La consola de Windows usa cp1252 por defecto y no puede imprimir «✓»/«·».
+    try:
+        import sys
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
     raw = _load()
     df = _expand_zeros(raw)
     print(f"· {len(raw):,} celdas con incidentes → {len(df):,} con ceros explícitos")
@@ -166,7 +172,7 @@ def main() -> None:
 
     meta = {
         "trained_at": datetime.now().isoformat(timespec="seconds"),
-        "source": "Bases de datos · TAB ALCALDÍA 09-19 (Cali)",
+        "source": "Bases de datos · ALCA SEC UNIDOS 2010-2026 · hurtos (Cali)",
         "n_cells": int(len(df)),
         "years": [int(y) for y in years],
         "test_year": int(test_year),

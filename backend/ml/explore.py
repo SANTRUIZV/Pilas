@@ -68,11 +68,11 @@ def explore_sheet(path, needle, key_cols, sample=SAMPLE):
 
 
 def main():
-    # Alcaldía: la fuente rica (hora + comuna + barrio)
+    # Alcaldía: la base de hurtos consolidada (fecha + hora + comuna + barrio)
     explore_sheet(
-        find("homologado"), "alcald",
-        key_cols=["VIGENCIA", "MES", "DIA", "HORA_HECHO", "CONFLICTIVIDAD",
-                  "TIPO_SITIO", "ARMA_EMPLEADA", "ZONA", "COMUNA", "CANTIDAD"],
+        find("consolidado"), "alca sec",
+        key_cols=["FECHA_HECHO", "HORA_HECHO", "TIPO_SITIO", "ARMA_EMPLEADA",
+                  "COMUNA", "BARRIO", "CANTIDAD", "SEXO", "EDAD"],
     )
     # Policía: agregado (sin hora)
     explore_sheet(

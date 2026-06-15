@@ -1,12 +1,16 @@
 """Ingesta de las bases reales (`Bases de datos/`) → CSVs limpios de entrenamiento.
 
-Fuente principal: hoja «TAB ALCALDÍA 09-19» de `Homologado_formato_largo.xlsx`,
-~170k incidentes de Cali con comuna, hora, día y delito. Se agrega CANTIDAD a la
-malla (año, comuna, hora, día_semana, mes) que alimenta el modelo de riesgo.
+Fuente principal: hoja «ALCA SEC UNIDOS 2010-2026» de
+`Consolidado_secretaria_alcaldia_2010_2026.xlsx` — la base de HURTOS de la
+Secretaría/Alcaldía (fusión de 2010-2019 y 2019-2026), ~219k incidentes de Cali
+con fecha, hora, comuna y barrio. Se agrega CANTIDAD a la malla
+(año, comuna, hora, día_semana, mes) que alimenta el modelo de riesgo. El año,
+el mes y el día de la semana se derivan de FECHA_HECHO (que viene como datetime o
+como texto `dd/mm/aaaa`).
 
 Salidas en `ml/datasets/`:
   - incidents_cali.csv     año, comuna, hour, weekday, month, is_holiday, count  (modelo de riesgo)
-  - crime_monthly.csv      conflictividad, year, month, count        (tendencias)
+  - crime_monthly.csv      conflictividad, year, month, count        (tendencias; aquí solo «Hurto persona»)
   - comuna_totals.csv      comuna, count                             (tabla de comunas)
   - cai_locations.csv      name, lat, lon, phone, address            (unidades de Policía)
   - health_services.csv    name, lat, lon, phone, address            (servicios de salud)
@@ -18,7 +22,7 @@ from __future__ import annotations
 import csv
 import unicodedata
 from collections import Counter, defaultdict
-from datetime import datetime, time
+from datetime import date, datetime, time
 
 from openpyxl import load_workbook
 
@@ -26,11 +30,6 @@ from app.config import BASE_DIR, DATA_DIR
 from app.holidays import is_holiday
 
 DB_DIR = BASE_DIR.parent / "Bases de datos"
-
-WEEKDAYS = {
-    "lunes": 0, "martes": 1, "miercoles": 2, "jueves": 3,
-    "viernes": 4, "sabado": 5, "domingo": 6,
-}
 
 
 def _norm(s) -> str:
@@ -65,6 +64,23 @@ def _to_hour(v) -> int | None:
     return None
 
 
+def _to_date(v) -> date | None:
+    """FECHA_HECHO normalizada a `date`. Acepta datetime/date de Excel o texto
+    en formato colombiano `dd/mm/aaaa` (la base trae ambos)."""
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    if isinstance(v, str):
+        s = v.strip()
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+            try:
+                return datetime.strptime(s, fmt).date()
+            except ValueError:
+                continue
+    return None
+
+
 def _to_comuna(v) -> int | None:
     try:
         c = int(v)
@@ -73,19 +89,15 @@ def _to_comuna(v) -> int | None:
     return c if 1 <= c <= 22 else None
 
 
-def _weekday(dia, fecha) -> int | None:
-    wd = WEEKDAYS.get(_norm(dia))
-    if wd is not None:
-        return wd
-    if isinstance(fecha, datetime):
-        return fecha.weekday()
-    return None
+# La base consolidada es exclusivamente de hurtos → toda fila cuenta como
+# «Hurto persona» para crime_monthly (id de delito «hurto-personas» en el front).
+_HURTO_CONFLICTIVIDAD = "Hurto persona"
 
 
 def ingest_alcaldia():
-    path = _find("homologado")
+    path = _find("consolidado")
     wb = load_workbook(path, read_only=True, data_only=True)
-    ws = wb[_sheet(wb, "alcald")]
+    ws = wb[_sheet(wb, "alca sec")]   # «ALCA SEC UNIDOS 2010-2026»
     rows = ws.iter_rows(values_only=True)
     header = list(next(rows))
     ix = {h: i for i, h in enumerate(header)}
@@ -101,27 +113,21 @@ def ingest_alcaldia():
         hour = _to_hour(r[ix["HORA_HECHO"]])
         if comuna is None or hour is None:
             continue
-        weekday = _weekday(r[ix["DIA"]], r[ix["FECHA_HECHO"]])
-        if weekday is None:
+        d = _to_date(r[ix["FECHA_HECHO"]])
+        if d is None:
             continue
-        try:
-            year = int(r[ix["VIGENCIA"]])
-            month = int(r[ix["MES"]])
-        except (TypeError, ValueError):
-            continue
+        year, month, weekday = d.year, d.month, d.weekday()
         qty = r[ix["CANTIDAD"]]
         qty = int(qty) if isinstance(qty, (int, float)) else 1
 
-        fecha = r[ix["FECHA_HECHO"]]
-        holiday = 1 if isinstance(fecha, datetime) and is_holiday(fecha.date()) else 0
+        holiday = 1 if is_holiday(d) else 0
         grid[(year, comuna, hour, weekday, month, holiday)] += qty
         comuna_totals[comuna] += qty
-        conf = str(r[ix["CONFLICTIVIDAD"]]).strip()
-        crime_monthly[(conf, year, month)] += qty
+        crime_monthly[(_HURTO_CONFLICTIVIDAD, year, month)] += qty
         kept += 1
 
     wb.close()
-    print(f"· Alcaldía: {seen:,} filas leídas, {kept:,} válidas, {len(grid):,} celdas de malla")
+    print(f"· Alcaldía (hurtos 2010–2026): {seen:,} filas leídas, {kept:,} válidas, {len(grid):,} celdas de malla")
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -402,6 +408,12 @@ def ingest_cuadrantes():
 
 
 def main():
+    # La consola de Windows usa cp1252 por defecto y no puede imprimir «✓»/«·».
+    try:
+        import sys
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
     ingest_alcaldia()
     ingest_cai()
     ingest_cuadrantes()
