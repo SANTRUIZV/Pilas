@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import MapH3 from "./MapH3.jsx";
 import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, riskClass, riskLabel, riskScore } from "./data.js";
 import { ZoneDetail, RoutePlanner, ReportsFeed, Trends } from "./Panels.jsx";
+import StatsView from "./Stats.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "./Tweaks.jsx";
 import { useApiStatus, useRiskMap, useApiData } from "./hooks.js";
 import { api } from "./api.js";
@@ -45,9 +46,9 @@ function Brand() {
 
 function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
   const labels = audience === "tourist" ? {
-    map: "Map", routes: "Safe routes", trends: "Insights", reports: "Reports"
+    map: "Map", stats: "Statistics", routes: "Safe routes", trends: "Insights", reports: "Reports"
   } : {
-    map: "Mapa", routes: "Rutas", trends: "Pulso", reports: "Reportes"
+    map: "Mapa", stats: "Estadísticas", routes: "Rutas", trends: "Pulso", reports: "Reportes"
   };
   // Estado de conexión: en vivo (modelo) · en vivo (analítico) · demo (sin API)
   const live = status?.online;
@@ -61,6 +62,7 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
       <Brand />
       <nav className="pls-nav">
         <button className={screen === "map" ? "is-on" : ""} onClick={() => setScreen("map")}>{labels.map}</button>
+        <button className={screen === "stats" ? "is-on" : ""} onClick={() => setScreen("stats")}>{labels.stats}</button>
         <button className={screen === "routes" ? "is-on" : ""} onClick={() => setScreen("routes")}>{labels.routes}</button>
         <button className={screen === "trends" ? "is-on" : ""} onClick={() => setScreen("trends")}>{labels.trends}</button>
         <button className={screen === "reports" ? "is-on" : ""} onClick={() => setScreen("reports")}>{labels.reports}</button>
@@ -268,7 +270,12 @@ function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSele
 
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [screen, setScreen] = useState("map");
+  // Pantalla inicial: por defecto «map», pero permite enlace directo por hash
+  // (p. ej. ciudadano.html#estadisticas) para compartir cada vista.
+  const [screen, setScreen] = useState(() => {
+    const h = (typeof window !== "undefined" ? window.location.hash : "").replace("#", "").toLowerCase();
+    return { estadisticas: "stats", stats: "stats", previsto: "stats", forecast: "stats", rutas: "routes", pulso: "trends", reportes: "reports", mapa: "map" }[h] || "map";
+  });
   // Arranca en la hora actual del dispositivo (9:20 → 9); el slider sigue
   // permitiendo moverla a cualquier hora.
   const [hour, setHour] = useState(() => new Date().getHours());
@@ -315,32 +322,38 @@ export default function App() {
   }
 
   return (
-    <div className="pls-app" data-screen-label={screen === "map" ? "01 Mapa" : screen === "routes" ? "02 Rutas" : screen === "trends" ? "03 Pulso" : "04 Reportes"}>
+    <div className="pls-app" data-screen-label={screen === "map" ? "01 Mapa" : screen === "stats" ? "02 Estadísticas" : screen === "routes" ? "03 Rutas" : screen === "trends" ? "04 Pulso" : "05 Reportes"}>
       <Header screen={screen} setScreen={setScreen} audience={t.audience} onOpenTweaks={() => setTweaksOpen(v => !v)} status={status} />
-      <div className="pls-main">
-        <Sidebar
-          hour={hour} setHour={setHour}
-          layers={layers} setLayers={setLayers}
-          vizType={t.vizType}
-          currentZone={currentZone}
-          score={score}
-          palette={t.palette}
-          audience={t.audience}
-          caiCount={caiList.length}
-        />
-        <MapArea
-          vizType={t.vizType} setVizType={(v) => setTweak("vizType", v)}
-          theme={t.theme} setTheme={(v) => setTweak("theme", v)}
-          selectedZoneId={selectedZoneId} setSelectedZoneId={setSelectedZoneId}
-          hour={hour}
-          layers={layers}
-          palette={t.palette}
-          routeFrom={routeFrom} routeTo={routeTo}
-          audience={t.audience}
-          riskByZone={riskByZone}
-        />
-        <div className="pls-rail">{rail}</div>
-      </div>
+      {screen === "stats" ? (
+        <div className="pls-main pls-main--stats">
+          <StatsView palette={t.palette} live={status?.online} />
+        </div>
+      ) : (
+        <div className="pls-main">
+          <Sidebar
+            hour={hour} setHour={setHour}
+            layers={layers} setLayers={setLayers}
+            vizType={t.vizType}
+            currentZone={currentZone}
+            score={score}
+            palette={t.palette}
+            audience={t.audience}
+            caiCount={caiList.length}
+          />
+          <MapArea
+            vizType={t.vizType} setVizType={(v) => setTweak("vizType", v)}
+            theme={t.theme} setTheme={(v) => setTweak("theme", v)}
+            selectedZoneId={selectedZoneId} setSelectedZoneId={setSelectedZoneId}
+            hour={hour}
+            layers={layers}
+            palette={t.palette}
+            routeFrom={routeFrom} routeTo={routeTo}
+            audience={t.audience}
+            riskByZone={riskByZone}
+          />
+          <div className="pls-rail">{rail}</div>
+        </div>
+      )}
       <Footer score={score} audience={t.audience} />
 
       <TweaksPanel title="Ajustes" open={tweaksOpen} onClose={() => setTweaksOpen(false)}>

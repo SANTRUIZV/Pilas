@@ -242,6 +242,57 @@ export const METRICS = {
   lastUpdate: "20 may 2026 · 04:00",
 };
 
+// Estadísticas de hurtos — respaldo demo (cifras reales agregadas de la base de
+// la Alcaldía 2010–2026). En vivo llegan vía /stats; esto es el fallback offline.
+export const STATS_FALLBACK = {
+  ready: false,
+  totalIncidents: 215563,
+  years: Array.from({ length: 17 }, (_, i) => 2010 + i),
+  yearRange: "2010–2026",
+  comunas: [
+    { comuna: 19, count: 26119 }, { comuna: 3, count: 24898 }, { comuna: 2, count: 23110 },
+    { comuna: 9, count: 18962 }, { comuna: 17, count: 14458 }, { comuna: 4, count: 12106 },
+    { comuna: 8, count: 11236 }, { comuna: 10, count: 10384 }, { comuna: 6, count: 9577 },
+    { comuna: 5, count: 9012 }, { comuna: 11, count: 8456 }, { comuna: 13, count: 7943 },
+    { comuna: 1, count: 7421 }, { comuna: 16, count: 6890 }, { comuna: 14, count: 6312 },
+    { comuna: 18, count: 5980 }, { comuna: 7, count: 5621 }, { comuna: 15, count: 5102 },
+    { comuna: 12, count: 4733 }, { comuna: 21, count: 4188 }, { comuna: 20, count: 3501 },
+    { comuna: 22, count: 2104 },
+  ],
+  modalidad: [
+    { label: "Sin arma (atraco directo)", count: 104827 },
+    { label: "Arma de fuego", count: 71770 },
+    { label: "Arma blanca", count: 30947 },
+    { label: "Objeto contundente", count: 9638 },
+    { label: "Escopolamina / sustancia", count: 1499 },
+    { label: "Sin dato", count: 192 },
+  ],
+  sitioClassified: [
+    { label: "Vía pública", count: 62742 }, { label: "Comercio", count: 8925 },
+    { label: "Interior de vehículo", count: 2451 }, { label: "Transporte público", count: 1975 },
+    { label: "Residencia", count: 1308 }, { label: "Parqueadero", count: 1221 },
+    { label: "Cajero / banco", count: 1205 },
+  ],
+  sexo: [{ label: "Hombre", count: 48559 }, { label: "Mujer", count: 32243 }],
+  sexoKnown: 80802, sexoSinDato: 138071,
+  edad: [
+    { label: "< 18", count: 1668 }, { label: "18-25", count: 16472 }, { label: "26-35", count: 25917 },
+    { label: "36-45", count: 18036 }, { label: "46-60", count: 13966 }, { label: "60+", count: 4634 },
+  ],
+  barrios: [
+    { barrio: "San Pedro", comuna: 3, count: 7295 }, { barrio: "San Nicolás", comuna: 3, count: 4747 },
+    { barrio: "San Vicente", comuna: 2, count: 2972 }, { barrio: "Lili", comuna: 17, count: 2621 },
+    { barrio: "El Calvario", comuna: 3, count: 2580 }, { barrio: "San Fernando Nuevo", comuna: 19, count: 2565 },
+    { barrio: "Sucre", comuna: 9, count: 2355 }, { barrio: "San Fernando Viejo", comuna: 19, count: 2310 },
+  ],
+  byHour: [8221, 5795, 5500, 5470, 5174, 8303, 8118, 8665, 8793, 9225, 12490, 12638, 10862, 9944, 9741, 11103, 10532, 10002, 11749, 11764, 10455, 8737, 6976, 5306],
+  byWeekday: [29956, 32254, 32703, 32591, 35041, 31228, 21790],
+  weekdayLabels: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+  byMonth: [18321, 18307, 18847, 17751, 17414, 16408, 16953, 18111, 18192, 19455, 18216, 17588],
+  byYear: [[2010, 5671], [2011, 6561], [2012, 6355], [2013, 8013], [2014, 7963], [2015, 7467], [2016, 9052], [2017, 12358], [2018, 14314], [2019, 18579], [2020, 11908], [2021, 16140], [2022, 21579], [2023, 23820], [2024, 20624], [2025, 19254], [2026, 5905]].map(([year, count]) => ({ year, count })),
+  highlights: { peakHour: 11, peakWeekday: 4, peakWeekdayLabel: "Vie", topComuna: 19, topModalidad: "Sin arma (atraco directo)" },
+};
+
 // Risk class util
 export function riskClass(r) {
   if (r < 25) return "low";

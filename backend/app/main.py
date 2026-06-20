@@ -15,7 +15,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import config, data, gov_stats
+from . import config, data, gov_stats, stats
 from .model import risk_model
 from .schemas import (
     CrimeShare, Health, HourRisk, RiskOut, Service, ZoneDetailOut, ZoneOut,
@@ -116,6 +116,28 @@ def risk_explain(
     return {"zone_id": zone["id"], "zone_name": zone["name"], "hour": h, **exp}
 
 
+@app.get("/risk/forecast", tags=["riesgo"])
+def risk_forecast() -> dict:
+    """Matriz de riesgo PREVISTO por el modelo para hoy: 22 comunas × 24 horas.
+    Alimenta el dashboard «Previsto» de la app ciudadana (mapa de calor hora×comuna,
+    ranking por comuna y curva 24h). La matriz es independiente de la hora pedida
+    (trae las 24); el frontend selecciona la columna que quiera mostrar."""
+    comunas = list(range(1, 23))
+    matrix: list[list[int]] = []
+    for c in comunas:
+        pseudo = {"id": f"comuna-{c}", "comuna": f"Comuna {c}", "baseRisk": data.comuna_base_risk(c)}
+        matrix.append([risk_model.score(pseudo, hh)["risk"] for hh in range(24)])
+    city_by_hour = [round(sum(matrix[ci][hh] for ci in range(len(comunas))) / len(comunas))
+                    for hh in range(24)]
+    return {
+        "comunas": comunas,
+        "matrix": matrix,
+        "cityByHour": city_by_hour,
+        "generatedHour": datetime.now().hour,
+        "source": "model" if risk_model.is_loaded else "analytic",
+    }
+
+
 @app.get("/risk/by-point", response_model=RiskOut, tags=["riesgo"])
 def risk_by_point(
     lat: float = Query(..., ge=-90, le=90),
@@ -197,6 +219,18 @@ def reports() -> list[dict]:
 def cuadrantes() -> list[dict]:
     """Directorio de cuadrantes de Policía de Cali (sin coordenadas)."""
     return data.CUADRANTES
+
+
+# ── Estadísticas ciudadanas ──────────────────────────────────────────────────
+@app.get("/stats", tags=["estadísticas"])
+def citizen_stats() -> dict:
+    """Estadísticas de hurtos para la vista «Estadísticas» de la app ciudadana:
+    comunas más afectadas, modalidades, tipo de sitio, perfil de víctima
+    (sexo/edad), patrón por hora/día y tendencia anual. Derivado de la base real
+    de hurtos 2010–2026. Si los CSV no están, devuelve {} (el front cae a demo)."""
+    if stats.is_ready():
+        return stats.citizen_stats_payload()
+    return {}
 
 
 # ── Gobierno ─────────────────────────────────────────────────────────────────

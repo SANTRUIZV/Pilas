@@ -150,6 +150,151 @@ def ingest_alcaldia():
             w.writerow([comuna, c])
 
 
+# ── Estadísticas ciudadanas (modalidad, sitio, víctima, barrio) ──────────────
+# La base fusiona dos fuentes con taxonomías distintas («ARMA DE FUEGO» vs «Arma
+# de fuego», etc.); estas funciones normalizan a categorías canónicas limpias.
+
+def _modalidad(v) -> str:
+    """ARMA_EMPLEADA → modalidad canónica del hurto."""
+    s = _norm(v)
+    if not s or s in ("none", "sin dato"):
+        return "Sin dato"
+    if "fuego" in s:
+        return "Arma de fuego"
+    if "blanca" in s or "cortante" in s or "punzante" in s:
+        return "Arma blanca"
+    if "contundente" in s:
+        return "Objeto contundente"
+    if "toxica" in s or "escopolamina" in s or "sustancia" in s:
+        return "Escopolamina / sustancia"
+    if "sin arma" in s or "sin empleo" in s:
+        return "Sin arma (atraco directo)"
+    return "Sin dato"
+
+
+def _sitio(v) -> str:
+    """TIPO_SITIO → tipo de lugar canónico. El campo es muy ruidoso (trae
+    direcciones libres), así que lo no reconocible cae a «Otro / sin clasificar»."""
+    s = _norm(v)
+    if not s or s in ("none", "sin dato"):
+        return "Otro / sin clasificar"
+    if ("via" in s and "publ" in s) or "semaforo" in s:
+        return "Vía pública"
+    if "residencia" in s or "vivienda" in s or "apartament" in s or "conjunto" in s:
+        return "Residencia"
+    if "vehiculo" in s or "automotor" in s:
+        return "Interior de vehículo"
+    if "mio" in s or "masivo" in s or "transporte" in s or s.startswith("bus"):
+        return "Transporte público"
+    if "comercial" in s or "local" in s or "tienda" in s or "almacen" in s:
+        return "Comercio"
+    if "cajero" in s or "banco" in s:
+        return "Cajero / banco"
+    if "parqueadero" in s:
+        return "Parqueadero"
+    return "Otro / sin clasificar"
+
+
+def _sexo(v) -> str:
+    s = _norm(v)
+    if "hombre" in s or s == "m" or "masculino" in s:
+        return "Hombre"
+    if "mujer" in s or "femenino" in s:
+        return "Mujer"
+    return "Sin dato"
+
+
+_EDAD_BANDS = ["< 18", "18-25", "26-35", "36-45", "46-60", "60+"]
+
+
+def _edad_band(e) -> str | None:
+    if not isinstance(e, (int, float)) or not (0 < e < 120):
+        return None
+    e = int(e)
+    if e < 18:
+        return "< 18"
+    if e <= 25:
+        return "18-25"
+    if e <= 35:
+        return "26-35"
+    if e <= 45:
+        return "36-45"
+    if e <= 60:
+        return "46-60"
+    return "60+"
+
+
+def ingest_hurto_stats():
+    """Agrega dimensiones cualitativas de la base de hurtos para la vista de
+    «Estadísticas» de la app ciudadana: modalidad (arma), tipo de sitio, perfil
+    de la víctima (sexo, edad) y barrios más afectados. Una pasada por la hoja.
+
+    Salidas en `ml/datasets/`:
+      - stats_modalidad.csv   modalidad, count
+      - stats_sitio.csv       sitio, count
+      - stats_sexo.csv        sexo, count
+      - stats_edad.csv        band, count
+      - stats_barrio.csv      barrio, comuna, count   (top 60 por incidentes)
+    """
+    path = _find("consolidado")
+    wb = load_workbook(path, read_only=True, data_only=True)
+    ws = wb[_sheet(wb, "alca sec")]
+    rows = ws.iter_rows(values_only=True)
+    header = list(next(rows))
+    ix = {h: i for i, h in enumerate(header)}
+
+    modalidad = Counter()
+    sitio = Counter()
+    sexo = Counter()
+    edad = Counter()
+    barrio = Counter()
+    barrio_comuna: dict[str, Counter] = defaultdict(Counter)
+
+    for r in rows:
+        qty = r[ix["CANTIDAD"]]
+        qty = int(qty) if isinstance(qty, (int, float)) else 1
+        modalidad[_modalidad(r[ix["ARMA_EMPLEADA"]])] += qty
+        sitio[_sitio(r[ix["TIPO_SITIO"]])] += qty
+        sexo[_sexo(r[ix["SEXO"]])] += qty
+        band = _edad_band(r[ix["EDAD"]])
+        if band:
+            edad[band] += qty
+        b = r[ix["BARRIO"]]
+        bn = str(b).strip() if b is not None else ""
+        if bn and _norm(bn) not in ("sin dato", "none", "rural"):
+            barrio[bn] += qty
+            c = _to_comuna(r[ix["COMUNA"]])
+            if c is not None:
+                barrio_comuna[bn][c] += qty
+    wb.close()
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    def _write_counter(name, col, counter, order=None):
+        items = [(k, counter[k]) for k in order if k in counter] if order \
+            else counter.most_common()
+        with open(DATA_DIR / name, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow([col, "count"])
+            for k, c in items:
+                w.writerow([k, c])
+
+    _write_counter("stats_modalidad.csv", "modalidad", modalidad)
+    _write_counter("stats_sitio.csv", "sitio", sitio)
+    _write_counter("stats_sexo.csv", "sexo", sexo)
+    _write_counter("stats_edad.csv", "band", edad, order=_EDAD_BANDS)
+
+    with open(DATA_DIR / "stats_barrio.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["barrio", "comuna", "count"])
+        for bn, c in barrio.most_common(60):
+            cm = barrio_comuna[bn].most_common(1)
+            w.writerow([bn, cm[0][0] if cm else "", c])
+
+    print(f"· Estadísticas hurto: modalidad={len(modalidad)} · sitio={len(sitio)} · "
+          f"barrios={min(60, len(barrio))} (de {len(barrio)})")
+
+
 def _parse_coords(lat_v, lon_v):
     """Coordenadas en dos celdas numéricas (a veces sin punto decimal: 34191 →
     3.4191) o combinadas como «lat, lon» en una sola celda (hoja «Limpio»).
@@ -415,6 +560,7 @@ def main():
     except Exception:
         pass
     ingest_alcaldia()
+    ingest_hurto_stats()
     ingest_cai()
     ingest_cuadrantes()
     ingest_salud()
