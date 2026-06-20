@@ -251,7 +251,7 @@ METRICS = {
     "rocAuc": 0.913,
     "trainedOn": "1.2M registros · 2018–2025",
     "sources": ["Datos Abiertos Colombia", "SIEDCO – Policía Nacional", "DANE", "Observatorio de Seguridad Cali"],
-    "zonesCovered": 247,
+    "zonesCovered": 22,
     "hexCount": 1804,
     "lastUpdate": "20 may 2026 · 04:00",
 }

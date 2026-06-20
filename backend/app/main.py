@@ -212,7 +212,10 @@ def tourism() -> list[dict]:
 
 @app.get("/reports", tags=["catálogos"])
 def reports() -> list[dict]:
-    return data.REPORTS
+    """Últimos hurtos registrados en la base real (de `recent_reports.csv`). Si el
+    CSV no está, cae a los reportes demo hardcodeados."""
+    recent = stats.recent_reports()
+    return recent if recent else data.REPORTS
 
 
 @app.get("/cuadrantes", tags=["catálogos"])

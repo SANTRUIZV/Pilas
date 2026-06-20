@@ -329,29 +329,46 @@ export function RoutePlanner({ from, to, setFrom, setTo, hour, palette, onClose,
 
 // ── Reports feed ────────────────────────────────────────────────────────
 export function ReportsFeed({ onClose }) {
+  // Últimos hurtos de la base real (vía /reports); fallback al demo local.
+  const { data: reports, live } = useApiData(api.reports, REPORTS, []);
+  const official = live && reports[0]?.official;
+  const showSitio = (s) => s && !s.toLowerCase().startsWith("otro");
   return (
     <aside className="pls-panel pls-panel-reports">
       <div className="pls-panel-hd">
-        <div className="pls-panel-eyebrow">Feed ciudadano · en vivo</div>
+        <div className="pls-panel-eyebrow">{official ? "Base oficial · Alcaldía de Cali" : "Feed ciudadano · demo"}</div>
         <button className="pls-x" onClick={onClose}>✕</button>
       </div>
-      <h2 className="pls-panel-title">Reportes recientes</h2>
+      <h2 className="pls-panel-title">{official ? "Últimos hurtos registrados" : "Reportes recientes"}</h2>
       <ul className="pls-reports">
-        {REPORTS.map(r => (
-          <li key={r.id}>
+        {reports.map((r, i) => (
+          <li key={r.id ?? i}>
             <span className={"pls-report-dot " + (r.verified ? "is-ok" : "")}></span>
             <div className="pls-report-body">
               <div className="pls-report-head">
                 <strong>{r.type}</strong>
-                <span>{r.time}</span>
+                <span>{r.timeLabel || r.time}</span>
               </div>
-              <div className="pls-report-meta">{r.zone} · {r.verified ? "verificado por Policía Nacional" : "sin verificar"}</div>
+              <div className="pls-report-meta">
+                {r.zone}
+                {r.modalidad ? ` · ${r.modalidad}` : ""}
+                {!official ? ` · ${r.verified ? "verificado por Policía Nacional" : "sin verificar"}` : ""}
+              </div>
+              {official && (
+                <div className="pls-report-tag">
+                  Registro oficial{showSitio(r.sitio) ? ` · ${r.sitio}` : ""}
+                </div>
+              )}
             </div>
           </li>
         ))}
       </ul>
       <button className="pls-btn pls-btn-primary pls-btn-block">Reportar incidente</button>
-      <p className="pls-foot-mute">Reportar es anónimo. Pilas valida con datos abiertos y SIEDCO.</p>
+      <p className="pls-foot-mute">
+        {official
+          ? "Últimos registros de la base de hurtos de la Alcaldía de Cali · 2010–2026. Reportar es anónimo."
+          : "Reportar es anónimo. Pilas valida con datos abiertos y SIEDCO."}
+      </p>
     </aside>
   );
 }
@@ -437,7 +454,7 @@ export function Trends({ palette }) {
               <div><span>Recall</span><strong>{(m.recall * 100).toFixed(1)}%</strong></div>
               <div><span>F1</span><strong>{(m.f1 * 100).toFixed(1)}%</strong></div>
               <div><span>ROC-AUC</span><strong>{(m.rocAuc * 100).toFixed(1)}%</strong></div>
-              <div><span>Zonas cubiertas</span><strong>{m.zonesCovered}</strong></div>
+              <div><span>Comunas cubiertas</span><strong>{m.zonesCovered}</strong></div>
             </div>
             <p className="pls-foot-mute">{m.model} · {m.trainedOn}</p>
           </>

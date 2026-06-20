@@ -981,6 +981,20 @@ button { font-family: inherit; color: inherit; }
 .pls-report-head strong { font-size: 13px; font-weight: 500; }
 .pls-report-head span { font-family: var(--pls-mono); font-size: 11px; color: var(--pls-fg-mute); }
 .pls-report-meta { font-size: 11.5px; color: var(--pls-fg-mute); margin-top: 2px; }
+.pls-report-tag {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: var(--pls-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pls-cool);
+  background: rgba(95, 183, 230, 0.12);
+  border: 1px solid rgba(95, 183, 230, 0.30);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
 
 /* Trends */
 .pls-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }

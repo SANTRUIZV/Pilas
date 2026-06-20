@@ -20,6 +20,7 @@ Uso:  python -m ml.ingest
 from __future__ import annotations
 
 import csv
+import heapq
 import unicodedata
 from collections import Counter, defaultdict
 from datetime import date, datetime, time
@@ -235,6 +236,7 @@ def ingest_hurto_stats():
       - stats_sexo.csv        sexo, count
       - stats_edad.csv        band, count
       - stats_barrio.csv      barrio, comuna, count   (top 60 por incidentes)
+      - recent_reports.csv    date, hour, comuna, barrio, modalidad, sitio  (50 más recientes)
     """
     path = _find("consolidado")
     wb = load_workbook(path, read_only=True, data_only=True)
@@ -249,23 +251,41 @@ def ingest_hurto_stats():
     edad = Counter()
     barrio = Counter()
     barrio_comuna: dict[str, Counter] = defaultdict(Counter)
+    recent: list = []        # min-heap (sortkey, seq, record): 50 reportes más recientes
+    seq = 0
+    RECENT_LIMIT = 50
 
     for r in rows:
         qty = r[ix["CANTIDAD"]]
         qty = int(qty) if isinstance(qty, (int, float)) else 1
-        modalidad[_modalidad(r[ix["ARMA_EMPLEADA"]])] += qty
-        sitio[_sitio(r[ix["TIPO_SITIO"]])] += qty
+        mod = _modalidad(r[ix["ARMA_EMPLEADA"]])
+        sit = _sitio(r[ix["TIPO_SITIO"]])
+        modalidad[mod] += qty
+        sitio[sit] += qty
         sexo[_sexo(r[ix["SEXO"]])] += qty
         band = _edad_band(r[ix["EDAD"]])
         if band:
             edad[band] += qty
         b = r[ix["BARRIO"]]
         bn = str(b).strip() if b is not None else ""
+        comuna = _to_comuna(r[ix["COMUNA"]])
         if bn and _norm(bn) not in ("sin dato", "none", "rural"):
             barrio[bn] += qty
-            c = _to_comuna(r[ix["COMUNA"]])
-            if c is not None:
-                barrio_comuna[bn][c] += qty
+            if comuna is not None:
+                barrio_comuna[bn][comuna] += qty
+
+        # Reportes recientes: conserva los 50 con fecha+hora más recientes.
+        d = _to_date(r[ix["FECHA_HECHO"]])
+        hr = _to_hour(r[ix["HORA_HECHO"]])
+        if d is not None and hr is not None:
+            key = d.toordinal() * 24 + hr
+            rec = (d.isoformat(), hr, comuna if comuna is not None else "", bn, mod, sit)
+            if len(recent) < RECENT_LIMIT:
+                heapq.heappush(recent, (key, seq, rec))
+                seq += 1
+            elif key > recent[0][0]:
+                heapq.heappushpop(recent, (key, seq, rec))
+                seq += 1
     wb.close()
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -291,8 +311,14 @@ def ingest_hurto_stats():
             cm = barrio_comuna[bn].most_common(1)
             w.writerow([bn, cm[0][0] if cm else "", c])
 
+    with open(DATA_DIR / "recent_reports.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["date", "hour", "comuna", "barrio", "modalidad", "sitio"])
+        for _key, _seq, rec in sorted(recent, key=lambda x: x[0], reverse=True):
+            w.writerow(list(rec))
+
     print(f"· Estadísticas hurto: modalidad={len(modalidad)} · sitio={len(sitio)} · "
-          f"barrios={min(60, len(barrio))} (de {len(barrio)})")
+          f"barrios={min(60, len(barrio))} (de {len(barrio)}) · recientes={len(recent)}")
 
 
 def _parse_coords(lat_v, lon_v):

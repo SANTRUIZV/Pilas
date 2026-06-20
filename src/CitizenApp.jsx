@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import MapH3 from "./MapH3.jsx";
 import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, riskClass, riskLabel, riskScore } from "./data.js";
+import { COMUNAS } from "./comunas.js";
 import { ZoneDetail, RoutePlanner, ReportsFeed, Trends } from "./Panels.jsx";
 import StatsView from "./Stats.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "./Tweaks.jsx";
@@ -70,7 +71,7 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
       <div className="pls-hd-actions">
         <span className="pls-pill" title={live ? `Backend conectado · fuente: ${status.source}` : "Backend no disponible · datos demo"}>
           <span className="pls-pill-dot" style={live ? null : { background: "var(--pls-fg-faint)", boxShadow: "none", animation: "none" }}></span>
-          {liveLabel} <strong>· 247 zonas</strong>
+          {liveLabel} <strong>· {COMUNAS.length} {audience === "tourist" ? "districts" : "comunas"}</strong>
         </span>
         <a href="gobierno.html" className="pls-pill" style={{ textDecoration: "none", color: "var(--pls-fg)" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>

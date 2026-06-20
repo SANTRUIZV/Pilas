@@ -16,6 +16,7 @@ from .config import DATA_DIR
 
 WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 EDAD_ORDER = ["< 18", "18-25", "26-35", "36-45", "46-60", "60+"]
+MONTHS_ES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
 
 def _read_counter(name: str, key_col: str) -> list[dict]:
@@ -100,6 +101,51 @@ def _barrios() -> list[dict]:
                 out.append({"barrio": r["barrio"], "comuna": comuna, "count": int(r["count"])})
             except (KeyError, ValueError):
                 continue
+    return out
+
+
+@lru_cache(maxsize=1)
+def recent_reports() -> list[dict]:
+    """Últimos hurtos registrados en la base (de `recent_reports.csv`), ya
+    ordenados de más reciente a más antiguo, listos para el feed de «Reportes»."""
+    path = DATA_DIR / "recent_reports.csv"
+    if not path.exists():
+        return []
+    out: list[dict] = []
+    with open(path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            try:
+                y, m, dd = (int(x) for x in r["date"].split("-"))
+                hour = int(r["hour"])
+            except (KeyError, ValueError):
+                continue
+            try:
+                comuna = int(r["comuna"]) if r.get("comuna") else None
+            except ValueError:
+                comuna = None
+            barrio = (r.get("barrio") or "").strip()
+            if barrio and comuna:
+                zone = f"{barrio} · Comuna {comuna}"
+            elif barrio:
+                zone = barrio
+            elif comuna:
+                zone = f"Comuna {comuna}"
+            else:
+                zone = "Cali"
+            mes = MONTHS_ES[m - 1] if 1 <= m <= 12 else "?"
+            out.append({
+                "id": f"rep-{len(out)}",
+                "type": "Hurto a personas",
+                "modalidad": r.get("modalidad", ""),
+                "sitio": r.get("sitio", ""),
+                "zone": zone,
+                "comuna": comuna,
+                "date": r["date"],
+                "hour": hour,
+                "timeLabel": f"{dd} {mes} {y} · {hour:02d}:00",
+                "official": True,
+                "verified": True,
+            })
     return out
 
 
