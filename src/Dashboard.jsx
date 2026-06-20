@@ -459,7 +459,7 @@ function GovFooter() {
   return (
     <footer className="pls-ft">
       <span className="pls-ft-item"><span className="pls-ft-live">{live ? "En vivo" : "Demo"}</span></span>
-      <span className="pls-ft-item"><strong>165k</strong> incidentes (Alcaldía 2010–2019)</span>
+      <span className="pls-ft-item"><strong>215k</strong> hurtos (Alcaldía 2010–2026)</span>
       <span className="pls-ft-item">Fuente <code>{live ? "API Pilas" : "demo local"}</code></span>
       <span className="pls-ft-item">
         Modelo <code>{trained ? "XGBoost (real)" : m.model}</code>

@@ -57,8 +57,8 @@ export default function Landing() {
           <div className="lnd-eyebrow">Datos abiertos + modelo predictivo · MinTIC «Datos al Ecosistema 2026»</div>
           <h1 className="lnd-title">Anticipa el riesgo.<br />Decide con datos.</h1>
           <p className="lnd-sub">
-            Pilas convierte los datos abiertos de seguridad de Cali —165k incidentes de la
-            Alcaldía (2010–2019)— en un mapa de riesgo por <strong>comuna y hora</strong>,
+            Pilas convierte los datos abiertos de seguridad de Cali —215k hurtos de la
+            Alcaldía (2010–2026)— en un mapa de riesgo por <strong>comuna y hora</strong>,
             estimado con un modelo XGBoost. La misma fuente alimenta dos vistas: una para
             cuidarte en la calle y otra para dirigir la operación de seguridad.
           </p>
@@ -101,7 +101,7 @@ export default function Landing() {
         </section>
 
         <section className="lnd-stats">
-          <div className="lnd-stat"><strong>165k</strong><span>incidentes · Alcaldía 2010–2019</span></div>
+          <div className="lnd-stat"><strong>215k</strong><span>hurtos · Alcaldía 2010–2026</span></div>
           <div className="lnd-stat"><strong>22</strong><span>comunas con riesgo por hora</span></div>
           <div className="lnd-stat"><strong>{CAI.length}</strong><span>CAI, estaciones y subestaciones</span></div>
           <div className="lnd-stat"><strong>{HOSPITALS.length}</strong><span>centros médicos con urgencias</span></div>

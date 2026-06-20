@@ -231,7 +231,7 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
         <span>Fuente</span>
         <strong>{detail?.source === "model" ? "XGBoost" : live ? "Analítico" : "Demo"}</strong>
         <span className="pls-foot-mute">
-          {live ? "Riesgo servido por el API de Pilas · datos reales (Alcaldía 2010–2019)" : "Sin backend · datos demo locales"}
+          {live ? "Riesgo servido por el API de Pilas · datos reales (Alcaldía 2010–2026)" : "Sin backend · datos demo locales"}
         </span>
       </div>
     </aside>
@@ -444,7 +444,7 @@ export function Trends({ palette }) {
               <div><span>MAE</span><strong>{trained.mae}</strong></div>
               <div><span>RMSE</span><strong>{trained.rmse}</strong></div>
             </div>
-            <p className="pls-foot-mute">XGBoost Poisson · split temporal · Alcaldía 2010–2019 · {m.trainedAt}</p>
+            <p className="pls-foot-mute">XGBoost Poisson · split temporal · Alcaldía 2010–2026 · {m.trainedAt}</p>
           </>
         ) : (
           <>

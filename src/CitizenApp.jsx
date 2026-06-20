@@ -6,7 +6,7 @@ import { COMUNAS } from "./comunas.js";
 import { ZoneDetail, RoutePlanner, ReportsFeed, Trends } from "./Panels.jsx";
 import StatsView from "./Stats.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "./Tweaks.jsx";
-import { useApiStatus, useRiskMap, useApiData } from "./hooks.js";
+import { useApiStatus, useRiskMap, useApiData, useComunaRisk } from "./hooks.js";
 import { api } from "./api.js";
 
 const TWEAK_DEFAULTS = {
@@ -111,7 +111,9 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
           <div className="pls-now-top">
             <div className="pls-now-loc">
               {currentZone?.name || "Cali"}
-              <small>{currentZone ? `${currentZone.comuna} · ${currentZone.pop}` : "Toca una comuna en el mapa"}</small>
+              <small>{currentZone
+                ? `${currentZone.comuna} · ${currentZone.pop}`
+                : (audience === "tourist" ? "Citywide average · tap a district" : "Promedio de la ciudad · toca una comuna")}</small>
             </div>
             <div className="pls-now-time">{String(hour).padStart(2, "0")}:00</div>
           </div>
@@ -285,11 +287,13 @@ export default function App() {
   const [selectedZoneId, setSelectedZoneId] = useState(null);
   const [routeFrom, setRouteFrom] = useState(null);
   const [routeTo, setRouteTo] = useState(null);
-  const [layers, setLayers] = useState({ cai: true, hosp: false, reports: true });
+  // Capas del mapa apagadas al iniciar: el usuario las activa cuando quiera.
+  const [layers, setLayers] = useState({ cai: false, hosp: false, reports: false });
   const [tweaksOpen, setTweaksOpen] = useState(false);
 
   const status = useApiStatus();
   const riskByZone = useRiskMap(hour);
+  const comunaRisk = useComunaRisk(hour);   // riesgo por comuna (modelo) para la hora
   const { data: caiList } = useApiData(api.cai, CAI, []);   // CAI reales (fallback estático)
   // Resolver de riesgo: API para la hora cargada, fallback al cálculo local.
   const riskOf = (zone, h) =>
@@ -299,8 +303,13 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", t.theme);
   }, [t.theme]);
 
+  // Riesgo de la ciudad = promedio de las 22 comunas a la hora actual. Se usa
+  // como «Índice de riesgo de Cali ahora» cuando no hay una comuna seleccionada.
+  const cityVals = Object.values(comunaRisk.byComuna || {});
+  const cityScore = cityVals.length ? Math.round(cityVals.reduce((a, b) => a + b, 0) / cityVals.length) : 0;
+
   const currentZone = ZONES.find(z => z.id === selectedZoneId);
-  const score = currentZone ? riskOf(currentZone, hour) : 0;
+  const score = currentZone ? riskOf(currentZone, hour) : cityScore;
 
   // Right rail content based on screen / selection
   let rail = null;
