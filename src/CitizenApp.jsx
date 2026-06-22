@@ -65,7 +65,6 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
         <button className={screen === "map" ? "is-on" : ""} onClick={() => setScreen("map")}>{labels.map}</button>
         <button className={screen === "stats" ? "is-on" : ""} onClick={() => setScreen("stats")}>{labels.stats}</button>
         <button className={screen === "routes" ? "is-on" : ""} onClick={() => setScreen("routes")}>{labels.routes}</button>
-        <button className={screen === "trends" ? "is-on" : ""} onClick={() => setScreen("trends")}>{labels.trends}</button>
         <button className={screen === "reports" ? "is-on" : ""} onClick={() => setScreen("reports")}>{labels.reports}</button>
       </nav>
       <div className="pls-hd-actions">
@@ -386,7 +385,7 @@ export default function App() {
 
         <TweakSection label="Demo" />
         <TweakButton label="Salto a Aguablanca · 22:00" onClick={() => { setSelectedZoneId("aguablanca"); setHour(22); setScreen("map"); setTweaksOpen(false); }} />
-        <TweakButton label="Ver pulso de la ciudad" onClick={() => { setScreen("trends"); setTweaksOpen(false); }} />
+        <TweakButton label="Ver pulso de la ciudad" onClick={() => { setSelectedZoneId(null); setScreen("map"); setTweaksOpen(false); }} />
         <TweakButton label="Planificar ruta Granada → Centro" onClick={() => {
           setRouteFrom(ZONES.find(z => z.id === "granada"));
           setRouteTo(ZONES.find(z => z.id === "centro"));
