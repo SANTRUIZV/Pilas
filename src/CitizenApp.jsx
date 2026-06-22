@@ -45,7 +45,51 @@ function Brand() {
   );
 }
 
-function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
+// Buscador de barrios para la navbar. Al elegir un barrio resuelve su comuna y
+// muestra el histórico en el rail (vía onSelectBarrio).
+function HeaderSearch({ barriosList, onSelectBarrio, audience }) {
+  const [q, setQ] = useState("");
+  const nq = normText(q);
+  const matches = nq
+    ? barriosList.filter(b => normText(b.barrio).includes(nq)).slice(0, 6)
+    : [];
+  const placeholder = audience === "tourist" ? "Search neighborhood…" : "Buscar barrio…";
+  const pickBarrio = (b) => { onSelectBarrio(b.barrio); setQ(""); };
+
+  return (
+    <div className="pls-search-wrap pls-search-wrap--hd">
+      <label className="pls-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5">
+          <circle cx="11" cy="11" r="7" /><path d="M21 21l-5-5" />
+        </svg>
+        <input
+          placeholder={placeholder}
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && matches[0]) pickBarrio(matches[0]); }}
+        />
+        {q && <button type="button" className="pls-search-clear" onClick={() => setQ("")} aria-label="Limpiar">✕</button>}
+      </label>
+      {matches.length > 0 && (
+        <ul className="pls-search-results">
+          {matches.map(b => (
+            <li key={b.barrio}>
+              <button type="button" onClick={() => pickBarrio(b)}>
+                <span className="pls-sr-name">{b.barrio}</span>
+                <span className="pls-sr-comuna">Comuna {b.comuna}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {nq && matches.length === 0 && (
+        <div className="pls-search-results pls-search-empty">Sin coincidencias en la base de hurtos.</div>
+      )}
+    </div>
+  );
+}
+
+function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList, onSelectBarrio }) {
   const labels = audience === "tourist" ? {
     map: "Map", stats: "Statistics", routes: "Safe routes", trends: "Insights", reports: "Reports"
   } : {
@@ -68,6 +112,7 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
         <button className={screen === "reports" ? "is-on" : ""} onClick={() => setScreen("reports")}>{labels.reports}</button>
       </nav>
       <div className="pls-hd-actions">
+        <HeaderSearch barriosList={barriosList} onSelectBarrio={onSelectBarrio} audience={audience} />
         <span className="pls-pill" title={live ? `Backend conectado · fuente: ${status.source}` : "Backend no disponible · datos demo"}>
           <span className="pls-pill-dot" style={live ? null : { background: "var(--pls-fg-faint)", boxShadow: "none", animation: "none" }}></span>
           {liveLabel} <strong>· {COMUNAS.length} {audience === "tourist" ? "districts" : "comunas"}</strong>
@@ -89,7 +134,7 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
   );
 }
 
-function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience, caiCount, barriosList, onSelectBarrio }) {
+function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience, caiCount }) {
   const labels = audience === "tourist" ? {
     where: "Where are you", search: "Search neighborhood…", time: "Time of day",
     layers: "Layers", legend: "Risk level"
@@ -101,13 +146,6 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
   const label = audience === "tourist"
     ? ({ low: "Calm", mid: "Stay aware", high: "Stay alert", veryHigh: "High alert" })[cls]
     : riskLabel(score);
-
-  const [q, setQ] = useState("");
-  const nq = normText(q);
-  const matches = nq
-    ? barriosList.filter(b => normText(b.barrio).includes(nq)).slice(0, 6)
-    : [];
-  const pickBarrio = (b) => { onSelectBarrio(b.barrio); setQ(""); };
 
   return (
     <aside className="pls-side">
@@ -147,39 +185,6 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
           <div className="pls-scrub-ticks">
             <span>00</span><span>06</span><span>12</span><span>18</span>
           </div>
-        </div>
-      </div>
-
-      <div className="pls-side-section">
-        <div className="pls-side-h">{audience === "tourist" ? "Search" : "Buscar"}</div>
-        <div className="pls-search-wrap">
-          <label className="pls-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5">
-              <circle cx="11" cy="11" r="7" /><path d="M21 21l-5-5" />
-            </svg>
-            <input
-              placeholder={labels.search}
-              value={q}
-              onChange={e => setQ(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && matches[0]) pickBarrio(matches[0]); }}
-            />
-            {q && <button type="button" className="pls-search-clear" onClick={() => setQ("")} aria-label="Limpiar">✕</button>}
-          </label>
-          {matches.length > 0 && (
-            <ul className="pls-search-results">
-              {matches.map(b => (
-                <li key={b.barrio}>
-                  <button type="button" onClick={() => pickBarrio(b)}>
-                    <span className="pls-sr-name">{b.barrio}</span>
-                    <span className="pls-sr-comuna">Comuna {b.comuna}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {nq && matches.length === 0 && (
-            <div className="pls-search-empty">Sin coincidencias en la base de hurtos.</div>
-          )}
         </div>
       </div>
 
@@ -364,7 +369,8 @@ export default function App() {
 
   return (
     <div className="pls-app" data-screen-label={screen === "map" ? "01 Mapa" : screen === "stats" ? "02 Estadísticas" : screen === "routes" ? "03 Rutas" : screen === "trends" ? "04 Pulso" : "05 Reportes"}>
-      <Header screen={screen} setScreen={setScreen} audience={t.audience} onOpenTweaks={() => setTweaksOpen(v => !v)} status={status} />
+      <Header screen={screen} setScreen={setScreen} audience={t.audience} onOpenTweaks={() => setTweaksOpen(v => !v)} status={status}
+        barriosList={barriosList} onSelectBarrio={selectBarrio} />
       {screen === "stats" ? (
         <div className="pls-main pls-main--stats">
           <StatsView palette={t.palette} live={status?.online} />

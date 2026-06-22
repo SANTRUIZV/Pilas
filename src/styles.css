@@ -94,7 +94,8 @@ button { font-family: inherit; color: inherit; }
   .pls-now-score-n { font-size: 44px !important; }
   .pls-now-loc { font-size: 18px !important; }
   .pls-hd { padding: 12px 14px !important; }
-  .pls-hd-actions .pls-pill:nth-child(2) { display: none; }
+  .pls-hd-actions .pls-pill:nth-child(3) { display: none; }  /* oculta «Vista gobierno» */
+  .pls-search-wrap--hd { width: 170px; }
 }
 
 /* ── Móvil: de 3 columnas a una sola apilada (mapa → panel contextual →
@@ -147,6 +148,8 @@ button { font-family: inherit; color: inherit; }
   .pls-hd { padding: 10px 12px !important; }
   .pls-brand-name { font-size: 19px; }
   .pls-hd-actions .pls-pill strong { display: none; }
+  .pls-search-wrap--hd { width: 130px; }
+  .pls-avatar { display: none; }
   .pls-panel-title { font-size: 24px !important; }
   .pls-now-score-n { font-size: 40px !important; }
   .pls-mapwrap { height: 48vh; height: 48dvh; min-height: 260px; }
@@ -444,10 +447,12 @@ button { font-family: inherit; color: inherit; }
 }
 .pls-search-clear:hover { color: var(--pls-fg); }
 .pls-search-results {
-  list-style: none; margin: 6px 0 0; padding: 4px;
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40;
+  list-style: none; margin: 0; padding: 4px;
   background: var(--pls-bg-2); border: 1px solid var(--pls-line);
   border-radius: var(--pls-r-1);
-  max-height: 240px; overflow-y: auto;
+  max-height: 280px; overflow-y: auto;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.28);
 }
 .pls-search-results li { margin: 0; }
 .pls-search-results button {
@@ -459,7 +464,12 @@ button { font-family: inherit; color: inherit; }
 .pls-search-results button:hover { background: var(--pls-bg-3); }
 .pls-sr-name { font-weight: 600; }
 .pls-sr-comuna { font-family: var(--pls-mono); font-size: 11px; color: var(--pls-fg-faint); white-space: nowrap; }
-.pls-search-empty { margin-top: 6px; font-size: 12px; color: var(--pls-fg-faint); padding: 0 2px; }
+.pls-search-empty { font-size: 12px; color: var(--pls-fg-faint); padding: 8px 10px; }
+
+/* Search en la navbar */
+.pls-search-wrap--hd { width: 230px; }
+.pls-search-wrap--hd .pls-search { padding: 7px 11px; background: var(--pls-bg-2); }
+.pls-search-wrap--hd .pls-search-results { left: auto; right: 0; width: 280px; }
 
 /* Barrio panel */
 .pls-barrio-comuna {
