@@ -435,6 +435,13 @@ export function Trends({ palette }) {
       </div>
 
       <div className="pls-section">
+        <div className="pls-section-h">Fuentes</div>
+        <ul className="pls-sources">
+          {m.sources.map(s => <li key={s}>{s}</li>)}
+        </ul>
+      </div>
+
+      <div className="pls-section">
         <div className="pls-section-h">Modelo · validación{trained ? " · real" : ""}</div>
         {trained ? (
           <>
@@ -459,13 +466,6 @@ export function Trends({ palette }) {
             <p className="pls-foot-mute">{m.model} · {m.trainedOn}</p>
           </>
         )}
-      </div>
-
-      <div className="pls-section">
-        <div className="pls-section-h">Fuentes</div>
-        <ul className="pls-sources">
-          {m.sources.map(s => <li key={s}>{s}</li>)}
-        </ul>
       </div>
     </aside>
   );
