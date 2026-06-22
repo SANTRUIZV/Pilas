@@ -8,10 +8,10 @@ import React, { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { polygonToCells, cellToBoundary, latLngToCell, gridDisk } from "h3-js";
-import { ZONES, CAI as CAI_STATIC, HOSPITALS as HOSPITALS_STATIC } from "./data.js";
-import { COMUNAS, COMUNA_POLYS, CALI_CENTER } from "./comunas.js";
-import { useComunaRisk, useApiData } from "./hooks.js";
-import { api } from "./api.js";
+import { ZONES, CAI as CAI_STATIC, HOSPITALS as HOSPITALS_STATIC } from "../data/data.js";
+import { COMUNAS, COMUNA_POLYS, CALI_CENTER } from "../data/comunas.js";
+import { useComunaRisk, useApiData } from "../lib/hooks.js";
+import { api } from "../lib/api.js";
 
 const DEFAULT_PALETTE = ["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"];
 

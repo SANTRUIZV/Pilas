@@ -3,10 +3,10 @@ import React, { useState } from "react";
 import {
   ZONES, CAI, HOSPITALS, CRIMES, HOURS, TIPS, REPORTS, METRICS,
   riskClass, riskLabel, riskScore, localBarrioDetail,
-} from "./data.js";
-import { COMUNAS } from "./comunas.js";
-import { api } from "./api.js";
-import { useApiData } from "./hooks.js";
+} from "../data/data.js";
+import { COMUNAS } from "../data/comunas.js";
+import { api } from "../lib/api.js";
+import { useApiData } from "../lib/hooks.js";
 
 // ── Risk chip ───────────────────────────────────────────────────────────
 export function RiskChip({ score, palette }) {

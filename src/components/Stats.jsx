@@ -1,10 +1,10 @@
 // Pilas — Vista de Estadísticas (app ciudadana). Dashboard de hurtos derivado de
 // la base real de la Alcaldía 2010–2026 (endpoint /stats, con fallback demo).
 import React, { useMemo, useState } from "react";
-import { STATS_FALLBACK, HOURS, riskClass } from "./data.js";
-import { COMUNAS } from "./comunas.js";
-import { api } from "./api.js";
-import { useApiData } from "./hooks.js";
+import { STATS_FALLBACK, HOURS, riskClass } from "../data/data.js";
+import { COMUNAS } from "../data/comunas.js";
+import { api } from "../lib/api.js";
+import { useApiData } from "../lib/hooks.js";
 
 const NF = new Intl.NumberFormat("es-CO");
 const nfmt = (n) => NF.format(Math.round(n || 0));

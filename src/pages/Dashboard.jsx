@@ -1,10 +1,10 @@
 // Pilas Gov Dashboard — Secretaría de Seguridad
 import React, { useState, useMemo } from "react";
-import MapH3 from "./MapH3.jsx";
-import { CRIMES, METRICS } from "./data.js";
-import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "./data-gov.js";
-import { useApiStatus, useApiData } from "./hooks.js";
-import { api } from "./api.js";
+import MapH3 from "../components/MapH3.jsx";
+import { CRIMES, METRICS } from "../data/data.js";
+import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "../data/data-gov.js";
+import { useApiStatus, useApiData } from "../lib/hooks.js";
+import { api } from "../lib/api.js";
 
 // Traduce el selector del header a días para la API de series.
 const PERIOD_DAYS = { "7d": 14, "30d": 30, "90d": 90, "6m": 180, "1a": 365 };

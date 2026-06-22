@@ -1,8 +1,8 @@
 // Hooks de integración con el API, con fallback a datos estáticos.
 import { useEffect, useState } from "react";
 import { api } from "./api.js";
-import { COMUNAS } from "./comunas.js";
-import { HOURS } from "./data.js";
+import { COMUNAS } from "../data/comunas.js";
+import { HOURS } from "../data/data.js";
 
 // Riesgo por comuna {n: risk} para una hora. Usa el modelo (/risk/comunas); si
 // el backend no responde, cae a un cálculo analítico local (baseRisk × hora).

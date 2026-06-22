@@ -1131,6 +1131,13 @@ button { font-family: inherit; color: inherit; }
 .pls-ft-item:last-child { border-right: 0; margin-left: auto; }
 .pls-ft-item strong { color: var(--pls-fg); font-weight: 500; }
 .pls-ft-item code { font-family: var(--pls-mono); color: var(--pls-cool); }
+.pls-ft-link {
+  text-decoration: none;
+  color: var(--pls-fg);
+  font-weight: 500;
+  cursor: pointer;
+}
+.pls-ft-link:hover { color: var(--pls-accent); text-decoration: underline; }
 .pls-ft-live { display: inline-flex; align-items: center; gap: 6px; }
 .pls-ft-live::before {
   content: "";

@@ -1,13 +1,13 @@
 // Pilas — App ciudadana (mapa, rutas, pulso, reportes, modo turista).
 import React, { useState, useEffect } from "react";
-import MapH3 from "./MapH3.jsx";
-import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, BARRIOS, normText, riskClass, riskLabel, riskScore } from "./data.js";
-import { COMUNAS } from "./comunas.js";
-import { ZoneDetail, RoutePlanner, ReportsFeed, Trends, BarrioPanel } from "./Panels.jsx";
-import StatsView from "./Stats.jsx";
-import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "./Tweaks.jsx";
-import { useApiStatus, useRiskMap, useApiData, useComunaRisk } from "./hooks.js";
-import { api } from "./api.js";
+import MapH3 from "../components/MapH3.jsx";
+import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, BARRIOS, normText, riskClass, riskLabel, riskScore } from "../data/data.js";
+import { COMUNAS } from "../data/comunas.js";
+import { ZoneDetail, RoutePlanner, ReportsFeed, Trends, BarrioPanel } from "../components/Panels.jsx";
+import StatsView from "../components/Stats.jsx";
+import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "../components/Tweaks.jsx";
+import { useApiStatus, useRiskMap, useApiData, useComunaRisk } from "../lib/hooks.js";
+import { api } from "../lib/api.js";
 
 const TWEAK_DEFAULTS = {
   theme: "dark",
@@ -254,6 +254,7 @@ function Footer({ score, audience }) {
       <span className="pls-ft-item">{audience === "tourist" ? "Last update" : "Última actualización"} <code>{m.lastUpdate}</code></span>
       <span className="pls-ft-item">{audience === "tourist" ? "Model" : "Modelo"} <code>{m.model}</code> · AUC <code>{(m.rocAuc*100).toFixed(1)}%</code></span>
       <span className="pls-ft-item">123 {audience === "tourist" ? "emergency" : "emergencias"} · 156 {audience === "tourist" ? "anti-kidnap" : "antiextorsión"}</span>
+      <a className="pls-ft-item pls-ft-link" href="creadores.html">{audience === "tourist" ? "Creators" : "Creadores"}</a>
     </footer>
   );
 }

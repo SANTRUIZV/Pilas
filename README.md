@@ -58,24 +58,33 @@ qué hace cada vista y muestra las cifras de las bases reales.
 index.html          Shell de la landing (elige vista)
 ciudadano.html      Shell de la app ciudadana
 gobierno.html       Shell del dashboard gubernamental
+creadores.html      Shell de la página de creadores
 src/
-  home.jsx          Entry de la landing · monta <Landing/>
-  Landing.jsx       Landing — explica y enlaza las dos vistas
-  citizen.jsx       Entry de la app ciudadana · monta <CitizenApp/>
-  main.jsx          Entry del dashboard · monta <Dashboard App/>
-  CitizenApp.jsx    App ciudadana (header, sidebar, mapa, footer, ajustes)
-  Panels.jsx        Paneles del rail ciudadano (zona, ruta, pulso, reportes)
-  Tweaks.jsx        Panel de Ajustes (tema, audiencia, viz, paleta)
-  Dashboard.jsx     Dashboard gubernamental (KPIs, series, tabla, alertas…)
-  MapH3.jsx         Mapa OpenStreetMap (Leaflet) + hexágonos H3 (Uber) · compartido
-  comunas.js        Las 22 comunas de Cali (centroides, sector, riesgo base)
-  MapView.jsx       Mapa SVG anterior (hex propio) — legado, ya no se usa
-  api.js            Cliente HTTP del backend (FastAPI)
-  hooks.js          Hooks de integración: estado de conexión, mapa de riesgo, fetch
-  data.js           Datos base de Cali (fallback cuando el backend no está)
-  data-gov.js       Datos del dashboard (fallback)
-  styles.css        Sistema de diseño base (tokens, layout, componentes)
-  dashboard.css     Estilos específicos del dashboard de gobierno
+  home.jsx          Entry landing · monta <Landing/>
+  citizen.jsx       Entry app ciudadana · monta <CitizenApp/>
+  gobierno.jsx      Entry dashboard · monta <Dashboard/>
+  creators.jsx      Entry creadores · monta <CreatorsPage/>
+  pages/            Componentes raíz que monta cada entry
+    Landing.jsx       Landing — explica y enlaza las vistas
+    CitizenApp.jsx    App ciudadana (header, sidebar, mapa, footer, ajustes)
+    Dashboard.jsx     Dashboard gubernamental (KPIs, series, tabla, alertas…)
+    CreatorsPage.jsx  Página de creadores (finalidad del proyecto + equipo)
+  components/        Piezas reutilizables que usan las páginas
+    Panels.jsx        Paneles del rail ciudadano (zona, ruta, pulso, reportes, barrio)
+    Stats.jsx         Vista de estadísticas de hurtos (app ciudadana)
+    Tweaks.jsx        Panel de Ajustes (tema, audiencia, viz, paleta)
+    MapH3.jsx         Mapa OpenStreetMap (Leaflet) + hexágonos H3 (Uber) · compartido
+  data/              Datos base de Cali (fallback cuando el backend no está)
+    data.js           Zonas, CAI, hospitales, barrios, métricas, estadísticas
+    data-gov.js       Datos del dashboard gubernamental
+    comunas.js        Las 22 comunas de Cali (polígonos, sector, riesgo base)
+  lib/               Integración con el backend
+    api.js            Cliente HTTP del backend (FastAPI)
+    hooks.js          Hooks: estado de conexión, mapa de riesgo, fetch genérico
+  styles/            Sistema de diseño
+    styles.css        Tokens, layout y componentes base (compartido)
+    landing.css       Estilos de la landing y la página de creadores
+    dashboard.css     Estilos específicos del dashboard de gobierno
 ```
 
 ## Backend e integración

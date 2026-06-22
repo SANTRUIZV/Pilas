@@ -1,7 +1,7 @@
 // Pilas — Landing: elige entre la app ciudadana y el centro de mando.
 import React from "react";
-import { CAI, HOSPITALS } from "./data.js";
-import { useApiStatus } from "./hooks.js";
+import { CAI, HOSPITALS } from "../data/data.js";
+import { useApiStatus } from "../lib/hooks.js";
 
 function Brand() {
   return (
@@ -113,6 +113,7 @@ export default function Landing() {
         <span className="pls-ft-item">Fuentes <strong>Datos Abiertos Colombia · Alcaldía de Cali</strong></span>
         <span className="pls-ft-item">Modelo <code>XGBoost · comuna × hora</code></span>
         <span className="pls-ft-item">123 emergencias · 156 antiextorsión</span>
+        <a className="pls-ft-item pls-ft-link" href="creadores.html">Creadores</a>
       </footer>
     </div>
   );
