@@ -960,6 +960,12 @@ button { font-family: inherit; color: inherit; }
 
 .pls-empty { padding: 24px 0; text-align: center; color: var(--pls-fg-mute); }
 .pls-empty p { margin: 6px 0; }
+.pls-soon-badge {
+  display: inline-block; margin-bottom: 10px;
+  padding: 4px 12px; border-radius: 999px;
+  background: var(--pls-accent); color: #fff;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+}
 
 /* Reports */
 .pls-reports { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }

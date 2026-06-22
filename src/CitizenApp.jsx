@@ -318,10 +318,7 @@ export default function App() {
   } else if (screen === "reports") {
     rail = <ReportsFeed onClose={() => setScreen("map")} />;
   } else if (screen === "routes") {
-    rail = <RoutePlanner from={routeFrom} to={routeTo}
-        setFrom={setRouteFrom} setTo={setRouteTo}
-        hour={hour} palette={t.palette} riskOf={riskOf}
-        onClose={() => setScreen("map")} />;
+    rail = <RoutePlanner onClose={() => setScreen("map")} />;
   } else if (selectedZoneId) {
     rail = <ZoneDetail zoneId={selectedZoneId} hour={hour} palette={t.palette} riskOf={riskOf}
         onClose={() => setSelectedZoneId(null)}

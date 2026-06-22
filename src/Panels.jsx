@@ -1,5 +1,5 @@
 // Panels: Zone detail, Route planner, Trends, Reports — app ciudadana.
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   ZONES, CAI, HOSPITALS, CRIMES, HOURS, TIPS, REPORTS, METRICS,
   riskClass, riskLabel, riskScore,
@@ -239,23 +239,7 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
 }
 
 // ── Route Planner ───────────────────────────────────────────────────────
-export function RoutePlanner({ from, to, setFrom, setTo, hour, palette, onClose, riskOf }) {
-  const zones = ZONES;
-  const [tab, setTab] = useState("safe"); // safe | fast
-  const rs = (z) => (riskOf ? riskOf(z, hour) : riskScore(z, hour));
-
-  // Compute route risk: average of from + to + midpoint nearest
-  const routeRisk = useMemo(() => {
-    if (!from || !to) return null;
-    const a = rs(from);
-    const b = rs(to);
-    const avg = (a + b) / 2;
-    const fast = Math.min(100, avg + 12);
-    const safe = Math.max(0, avg - 8);
-    return { a, b, avg, fast, safe };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to, hour]);
-
+export function RoutePlanner({ onClose }) {
   return (
     <aside className="pls-panel pls-panel-route">
       <div className="pls-panel-hd">
@@ -264,65 +248,11 @@ export function RoutePlanner({ from, to, setFrom, setTo, hour, palette, onClose,
       </div>
       <h2 className="pls-panel-title">Ruta segura</h2>
 
-      <div className="pls-route-fields">
-        <div className="pls-field">
-          <span className="pls-field-bullet" style={{ background: "#F5F0E8" }}></span>
-          <select value={from?.id || ""} onChange={e => setFrom(zones.find(z => z.id === e.target.value))}>
-            <option value="">Desde…</option>
-            {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
-          </select>
-        </div>
-        <div className="pls-field-conn"></div>
-        <div className="pls-field">
-          <span className="pls-field-bullet" style={{ background: "#FF5A36" }}></span>
-          <select value={to?.id || ""} onChange={e => setTo(zones.find(z => z.id === e.target.value))}>
-            <option value="">Hasta…</option>
-            {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
-          </select>
-        </div>
+      <div className="pls-empty">
+        <span className="pls-soon-badge">Próximamente</span>
+        <p>Estamos afinando el cálculo de rutas seguras. Esta función estará disponible muy pronto.</p>
+        <p className="pls-foot-mute">Pilas considerará iluminación, presencia policial, reportes recientes y patrón histórico.</p>
       </div>
-
-      {routeRisk && (
-        <>
-          <div className="pls-route-tabs">
-            <button className={"pls-tab " + (tab === "safe" ? "is-on" : "")} onClick={() => setTab("safe")}>
-              <span className="pls-tab-eyebrow">Recomendada</span>
-              <span className="pls-tab-h">Pilas</span>
-              <span className="pls-tab-sub">{Math.round(routeRisk.safe)} · vía iluminada</span>
-            </button>
-            <button className={"pls-tab " + (tab === "fast" ? "is-on" : "")} onClick={() => setTab("fast")}>
-              <span className="pls-tab-eyebrow">Más rápida</span>
-              <span className="pls-tab-h">Directa</span>
-              <span className="pls-tab-sub">{Math.round(routeRisk.fast)} · –6 min</span>
-            </button>
-          </div>
-
-          <div className="pls-section">
-            <div className="pls-section-h">Detalle de la ruta</div>
-            <ul className="pls-steps">
-              <li><strong>{from.name}</strong> <span>Punto de salida · <RiskChip score={routeRisk.a} palette={palette} /></span></li>
-              <li><strong>Vía {tab === "safe" ? "Calle 5 (iluminada)" : "Cra 1 (directa)"}</strong> <span>{tab === "safe" ? "16 min · 2 CAI en ruta" : "10 min · 0 CAI en ruta"}</span></li>
-              <li><strong>{to.name}</strong> <span>Llegada · <RiskChip score={routeRisk.b} palette={palette} /></span></li>
-            </ul>
-          </div>
-
-          <div className="pls-section">
-            <div className="pls-section-h">Antes de salir</div>
-            <ul className="pls-tips">
-              <li><span className="pls-bullet">→</span>Comparte tu ubicación en vivo con un contacto.</li>
-              <li><span className="pls-bullet">→</span>Guarda tu celular en bolsillo interno.</li>
-              {hour >= 19 && <li><span className="pls-bullet">→</span>Prefiere taxi/app; evita caminar por La 5ª de noche.</li>}
-            </ul>
-          </div>
-        </>
-      )}
-
-      {!routeRisk && (
-        <div className="pls-empty">
-          <p>Elige origen y destino para ver la ruta más segura.</p>
-          <p className="pls-foot-mute">Pilas considera iluminación, presencia policial, reportes recientes y patrón histórico.</p>
-        </div>
-      )}
     </aside>
   );
 }
@@ -442,7 +372,7 @@ export function Trends({ palette }) {
       </div>
 
       <div className="pls-section">
-        <div className="pls-section-h">Modelo · validación{trained ? " · real" : ""}</div>
+        <div className="pls-section-h">Modelo IA · validación{trained ? " · real" : ""}</div>
         {trained ? (
           <>
             <div className="pls-metrics">
