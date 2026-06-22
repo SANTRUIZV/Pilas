@@ -1,9 +1,9 @@
 // Pilas — App ciudadana (mapa, rutas, pulso, reportes, modo turista).
 import React, { useState, useEffect } from "react";
 import MapH3 from "./MapH3.jsx";
-import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, riskClass, riskLabel, riskScore } from "./data.js";
+import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, BARRIOS, normText, riskClass, riskLabel, riskScore } from "./data.js";
 import { COMUNAS } from "./comunas.js";
-import { ZoneDetail, RoutePlanner, ReportsFeed, Trends } from "./Panels.jsx";
+import { ZoneDetail, RoutePlanner, ReportsFeed, Trends, BarrioPanel } from "./Panels.jsx";
 import StatsView from "./Stats.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "./Tweaks.jsx";
 import { useApiStatus, useRiskMap, useApiData, useComunaRisk } from "./hooks.js";
@@ -89,7 +89,7 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status }) {
   );
 }
 
-function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience, caiCount }) {
+function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience, caiCount, barriosList, onSelectBarrio }) {
   const labels = audience === "tourist" ? {
     where: "Where are you", search: "Search neighborhood…", time: "Time of day",
     layers: "Layers", legend: "Risk level"
@@ -101,6 +101,13 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
   const label = audience === "tourist"
     ? ({ low: "Calm", mid: "Stay aware", high: "Stay alert", veryHigh: "High alert" })[cls]
     : riskLabel(score);
+
+  const [q, setQ] = useState("");
+  const nq = normText(q);
+  const matches = nq
+    ? barriosList.filter(b => normText(b.barrio).includes(nq)).slice(0, 6)
+    : [];
+  const pickBarrio = (b) => { onSelectBarrio(b.barrio); setQ(""); };
 
   return (
     <aside className="pls-side">
@@ -145,13 +152,35 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
 
       <div className="pls-side-section">
         <div className="pls-side-h">{audience === "tourist" ? "Search" : "Buscar"}</div>
-        <label className="pls-search">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5">
-            <circle cx="11" cy="11" r="7" /><path d="M21 21l-5-5" />
-          </svg>
-          <input placeholder={labels.search} />
-          <span className="pls-kbd">⌘K</span>
-        </label>
+        <div className="pls-search-wrap">
+          <label className="pls-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5">
+              <circle cx="11" cy="11" r="7" /><path d="M21 21l-5-5" />
+            </svg>
+            <input
+              placeholder={labels.search}
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && matches[0]) pickBarrio(matches[0]); }}
+            />
+            {q && <button type="button" className="pls-search-clear" onClick={() => setQ("")} aria-label="Limpiar">✕</button>}
+          </label>
+          {matches.length > 0 && (
+            <ul className="pls-search-results">
+              {matches.map(b => (
+                <li key={b.barrio}>
+                  <button type="button" onClick={() => pickBarrio(b)}>
+                    <span className="pls-sr-name">{b.barrio}</span>
+                    <span className="pls-sr-comuna">Comuna {b.comuna}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {nq && matches.length === 0 && (
+            <div className="pls-search-empty">Sin coincidencias en la base de hurtos.</div>
+          )}
+        </div>
       </div>
 
       <div className="pls-side-section">
@@ -284,6 +313,7 @@ export default function App() {
   // Sin zona preseleccionada: el rail derecho muestra el Pulso de la ciudad
   // hasta que el usuario toque una comuna en el mapa.
   const [selectedZoneId, setSelectedZoneId] = useState(null);
+  const [selectedBarrio, setSelectedBarrio] = useState(null);  // barrio buscado → comuna + histórico
   const [routeFrom, setRouteFrom] = useState(null);
   const [routeTo, setRouteTo] = useState(null);
   // Capas del mapa apagadas al iniciar: el usuario las activa cuando quiera.
@@ -294,6 +324,9 @@ export default function App() {
   const riskByZone = useRiskMap(hour);
   const comunaRisk = useComunaRisk(hour);   // riesgo por comuna (modelo) para la hora
   const { data: caiList } = useApiData(api.cai, CAI, []);   // CAI reales (fallback estático)
+  const { data: barriosData } = useApiData(api.barrios, { barrios: BARRIOS }, []);  // catálogo para el buscador
+  const barriosList = barriosData?.barrios || BARRIOS;
+  const selectBarrio = (name) => { setSelectedBarrio(name); setSelectedZoneId(null); setScreen("map"); };
   // Resolver de riesgo: API para la hora cargada, fallback al cálculo local.
   const riskOf = (zone, h) =>
     h === hour && riskByZone && riskByZone[zone.id] != null ? riskByZone[zone.id] : riskScore(zone, h);
@@ -318,6 +351,8 @@ export default function App() {
     rail = <ReportsFeed onClose={() => setScreen("map")} />;
   } else if (screen === "routes") {
     rail = <RoutePlanner onClose={() => setScreen("map")} />;
+  } else if (selectedBarrio) {
+    rail = <BarrioPanel name={selectedBarrio} onClose={() => setSelectedBarrio(null)} />;
   } else if (selectedZoneId) {
     rail = <ZoneDetail zoneId={selectedZoneId} hour={hour} palette={t.palette} riskOf={riskOf}
         onClose={() => setSelectedZoneId(null)}
@@ -345,11 +380,13 @@ export default function App() {
             palette={t.palette}
             audience={t.audience}
             caiCount={caiList.length}
+            barriosList={barriosList}
+            onSelectBarrio={selectBarrio}
           />
           <MapArea
             vizType={t.vizType} setVizType={(v) => setTweak("vizType", v)}
             theme={t.theme} setTheme={(v) => setTweak("theme", v)}
-            selectedZoneId={selectedZoneId} setSelectedZoneId={setSelectedZoneId}
+            selectedZoneId={selectedZoneId} setSelectedZoneId={(id) => { setSelectedZoneId(id); setSelectedBarrio(null); }}
             hour={hour}
             layers={layers}
             palette={t.palette}

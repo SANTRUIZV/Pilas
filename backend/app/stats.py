@@ -9,10 +9,18 @@ los datos demo del frontend.
 from __future__ import annotations
 
 import csv
+import unicodedata
 from collections import defaultdict
 from functools import lru_cache
 
 from .config import DATA_DIR
+
+
+def _norm(s: str) -> str:
+    """Normaliza texto para comparar: minúsculas y sin acentos."""
+    s = unicodedata.normalize("NFKD", s or "")
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return s.lower().strip()
 
 WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 EDAD_ORDER = ["< 18", "18-25", "26-35", "36-45", "46-60", "60+"]
@@ -102,6 +110,64 @@ def _barrios() -> list[dict]:
             except (KeyError, ValueError):
                 continue
     return out
+
+
+@lru_cache(maxsize=1)
+def _comuna_year_totals() -> dict[int, dict[int, int]]:
+    """Agrega `incidents_cali.csv` por comuna y año → {comuna: {year: count}}."""
+    path = DATA_DIR / "incidents_cali.csv"
+    if not path.exists():
+        return {}
+    out: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+    with open(path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            try:
+                c = int(r["comuna"]); y = int(r["year"]); n = int(r["count"])
+            except (KeyError, ValueError):
+                continue
+            out[c][y] += n
+    return {c: dict(ys) for c, ys in out.items()}
+
+
+def barrios_list() -> list[dict]:
+    """Barrios con su comuna y total histórico, ordenados por total desc."""
+    return sorted(_barrios(), key=lambda b: b["count"], reverse=True)
+
+
+def barrio_detail(name: str) -> dict | None:
+    """Estadística histórica (estimada) por año de un barrio.
+
+    No existe el conteo real hurto-por-barrio-por-año en la base, así que se
+    reparte la serie anual REAL de la comuna del barrio según la participación
+    del barrio en el total histórico de esa comuna (barrio.count / total comuna).
+    Por eso `estimated=True`."""
+    target = _norm(name)
+    if not target:
+        return None
+    barrios = _barrios()
+    match = next((b for b in barrios if _norm(b["barrio"]) == target), None)
+    if match is None:  # coincidencia parcial: el barrio empieza por / contiene el texto
+        match = next((b for b in barrios if target in _norm(b["barrio"])), None)
+    if match is None:
+        return None
+
+    comuna = match["comuna"]
+    by_comuna_year = _comuna_year_totals().get(comuna, {})
+    comuna_total = sum(by_comuna_year.values())
+    share = (match["count"] / comuna_total) if comuna_total else 0.0
+    by_year = [
+        {"year": y, "count": round(by_comuna_year[y] * share)}
+        for y in sorted(by_comuna_year)
+    ]
+    return {
+        "barrio": match["barrio"],
+        "comuna": comuna,
+        "total": match["count"],
+        "comunaTotal": comuna_total,
+        "share": round(share, 4),
+        "byYear": by_year,
+        "estimated": True,
+    }
 
 
 @lru_cache(maxsize=1)

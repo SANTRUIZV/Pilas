@@ -236,6 +236,22 @@ def citizen_stats() -> dict:
     return {}
 
 
+@app.get("/barrios", tags=["estadísticas"])
+def barrios() -> dict:
+    """Catálogo de barrios con su comuna y total histórico, para el buscador."""
+    return {"barrios": stats.barrios_list()}
+
+
+@app.get("/barrios/{barrio}", tags=["estadísticas"])
+def barrio_stats(barrio: str) -> dict:
+    """Estadística histórica por año (estimada) de un barrio + su comuna.
+    404 si el barrio no está en la base."""
+    detail = stats.barrio_detail(barrio)
+    if detail is None:
+        raise HTTPException(status_code=404, detail=f"Barrio '{barrio}' no encontrado")
+    return detail
+
+
 # ── Gobierno ─────────────────────────────────────────────────────────────────
 # Todos derivan del dataset histórico real (incidents_cali.csv, crime_monthly.csv)
 # y de las predicciones del modelo XGBoost. Si los CSVs no están, /gov_stats

@@ -293,6 +293,70 @@ export const STATS_FALLBACK = {
   highlights: { peakHour: 11, peakWeekday: 4, peakWeekdayLabel: "Vie", topComuna: 19, topModalidad: "Sin arma (atraco directo)" },
 };
 
+// Barrios con su comuna y total histórico de hurtos 2010–2026 (de stats_barrio.csv).
+// Sirve de respaldo del buscador cuando el backend (/barrios) no responde.
+export const BARRIOS = [
+  { barrio: "San Pedro", comuna: 3, count: 7295 }, { barrio: "San Nicolás", comuna: 3, count: 4747 },
+  { barrio: "San Vicente", comuna: 2, count: 2972 }, { barrio: "Lili", comuna: 17, count: 2621 },
+  { barrio: "El Calvario", comuna: 3, count: 2580 }, { barrio: "San Fernando Nuevo", comuna: 19, count: 2565 },
+  { barrio: "Sucre", comuna: 9, count: 2355 }, { barrio: "San Fernando Viejo", comuna: 19, count: 2310 },
+  { barrio: "Ciudad Córdoba", comuna: 15, count: 2270 }, { barrio: "Versalles", comuna: 2, count: 1996 },
+  { barrio: "El Lido", comuna: 19, count: 1979 }, { barrio: "Urbanización Tequendama", comuna: 19, count: 1965 },
+  { barrio: "La Flora", comuna: 2, count: 1942 }, { barrio: "Granada", comuna: 2, count: 1849 },
+  { barrio: "Junín", comuna: 9, count: 1815 }, { barrio: "El Ingenio", comuna: 17, count: 1808 },
+  { barrio: "Calima", comuna: 4, count: 1801 }, { barrio: "Parcelaciones Pance", comuna: 22, count: 1787 },
+  { barrio: "San Juan Bosco", comuna: 3, count: 1782 }, { barrio: "Santa Mónica", comuna: 2, count: 1717 },
+  { barrio: "Prados del Norte", comuna: 2, count: 1633 }, { barrio: "Chipichape", comuna: 2, count: 1615 },
+  { barrio: "Alfonso Bonilla Aragón", comuna: 14, count: 1552 }, { barrio: "San Antonio", comuna: 3, count: 1548 },
+  { barrio: "El Sena", comuna: 5, count: 1542 }, { barrio: "Caney", comuna: 17, count: 1505 },
+  { barrio: "Barrio Obrero", comuna: 9, count: 1503 }, { barrio: "Mojica", comuna: 15, count: 1397 },
+  { barrio: "Terrón Colorado", comuna: 1, count: 1396 }, { barrio: "Santa Rosa", comuna: 3, count: 1378 },
+  { barrio: "Manuela Beltrán", comuna: 14, count: 1376 }, { barrio: "Vipasa", comuna: 2, count: 1372 },
+  { barrio: "Nueva Floresta", comuna: 12, count: 1351 }, { barrio: "Ciudad Capri", comuna: 17, count: 1351 },
+  { barrio: "Alameda", comuna: 9, count: 1323 }, { barrio: "Centenario", comuna: 2, count: 1317 },
+  { barrio: "Guayaquil", comuna: 9, count: 1313 }, { barrio: "Valle Grande", comuna: 21, count: 1299 },
+  { barrio: "La Merced", comuna: 3, count: 1272 }, { barrio: "El Morichal", comuna: 15, count: 1234 },
+  { barrio: "Urbanización Ciudad Jardín", comuna: 22, count: 1231 }, { barrio: "Antonio Nariño", comuna: 16, count: 1221 },
+  { barrio: "El Limonar", comuna: 17, count: 1219 }, { barrio: "Ciudadela Floralia", comuna: 6, count: 1204 },
+  { barrio: "El Cedro", comuna: 19, count: 1169 }, { barrio: "Urbanización San Joaquin", comuna: 17, count: 1153 },
+  { barrio: "Pampa Linda", comuna: 19, count: 1150 }, { barrio: "Mariano Ramos", comuna: 16, count: 1144 },
+  { barrio: "Nueva Tequendama", comuna: 19, count: 1085 }, { barrio: "Calimio Desepaz", comuna: 21, count: 1080 },
+  { barrio: "Villa Colombia", comuna: 8, count: 1076 }, { barrio: "El Guabal", comuna: 10, count: 1067 },
+  { barrio: "San Pascual", comuna: 3, count: 1066 }, { barrio: "Santa Elena", comuna: 10, count: 1058 },
+  { barrio: "El Refugio", comuna: 19, count: 1055 }, { barrio: "El Troncal", comuna: 8, count: 1054 },
+  { barrio: "Bretaña", comuna: 9, count: 1042 }, { barrio: "Prados Del Norte", comuna: 2, count: 1024 },
+  { barrio: "La Hacienda", comuna: 17, count: 997 }, { barrio: "Unicentro Cali", comuna: 17, count: 983 },
+];
+
+// Normaliza texto para buscar: minúsculas y sin acentos.
+export function normText(s) {
+  return (s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
+}
+
+// Estimación offline de la serie anual de un barrio cuando /barrios/{name} no
+// responde: reparte la tendencia anual de la ciudad (STATS_FALLBACK.byYear) según
+// la participación del barrio en el total histórico. Misma idea que el backend,
+// pero con la forma temporal de la ciudad en vez de la de la comuna.
+export function localBarrioDetail(name) {
+  const q = normText(name);
+  if (!q) return null;
+  const match =
+    BARRIOS.find(b => normText(b.barrio) === q) ||
+    BARRIOS.find(b => normText(b.barrio).includes(q));
+  if (!match) return null;
+  const share = STATS_FALLBACK.totalIncidents ? match.count / STATS_FALLBACK.totalIncidents : 0;
+  const byYear = STATS_FALLBACK.byYear.map(({ year, count }) => ({ year, count: Math.round(count * share) }));
+  return {
+    barrio: match.barrio,
+    comuna: match.comuna,
+    total: match.count,
+    comunaTotal: null,
+    share: Math.round(share * 10000) / 10000,
+    byYear,
+    estimated: true,
+  };
+}
+
 // Risk class util
 export function riskClass(r) {
   if (r < 25) return "low";

@@ -2,8 +2,9 @@
 import React, { useState } from "react";
 import {
   ZONES, CAI, HOSPITALS, CRIMES, HOURS, TIPS, REPORTS, METRICS,
-  riskClass, riskLabel, riskScore,
+  riskClass, riskLabel, riskScore, localBarrioDetail,
 } from "./data.js";
+import { COMUNAS } from "./comunas.js";
 import { api } from "./api.js";
 import { useApiData } from "./hooks.js";
 
@@ -397,6 +398,82 @@ export function Trends({ palette }) {
           </>
         )}
       </div>
+    </aside>
+  );
+}
+
+// ── Barrio (búsqueda → comuna + histórico por año) ───────────────────────
+export function BarrioPanel({ name, onClose }) {
+  const { data: d } = useApiData(() => api.barrioDetail(name), localBarrioDetail(name), [name]);
+
+  if (!d) {
+    return (
+      <aside className="pls-panel pls-panel-barrio">
+        <div className="pls-panel-hd">
+          <div className="pls-panel-eyebrow">Barrio</div>
+          <button className="pls-x" onClick={onClose}>✕</button>
+        </div>
+        <div className="pls-empty">
+          <p>No encontramos «{name}» en la base de hurtos 2010–2026.</p>
+          <p className="pls-foot-mute">Prueba con otro barrio (p. ej. San Pedro, Granada, El Ingenio).</p>
+        </div>
+      </aside>
+    );
+  }
+
+  const years = d.byYear || [];
+  const max = Math.max(1, ...years.map(y => y.count));
+  const peak = years.reduce((a, b) => (b.count > a.count ? b : a), years[0] || { year: "—", count: 0 });
+  const comuna = COMUNAS.find(c => c.n === d.comuna);
+  const nf = new Intl.NumberFormat("es-CO");
+
+  return (
+    <aside className="pls-panel pls-panel-barrio">
+      <div className="pls-panel-hd">
+        <div className="pls-panel-eyebrow">Barrio</div>
+        <button className="pls-x" onClick={onClose}>✕</button>
+      </div>
+      <h2 className="pls-panel-title">{d.barrio}</h2>
+      <div className="pls-barrio-comuna">
+        Comuna {d.comuna}{comuna ? ` · ${comuna.name}` : ""}
+      </div>
+
+      <div className="pls-stats">
+        <div className="pls-stat">
+          <span className="pls-stat-v">{nf.format(d.total)}</span>
+          <span className="pls-stat-l">Hurtos 2010–2026</span>
+        </div>
+        <div className="pls-stat">
+          <span className="pls-stat-v">{(d.share * 100).toFixed(1)}%</span>
+          <span className="pls-stat-l">de su comuna</span>
+        </div>
+        <div className="pls-stat">
+          <span className="pls-stat-v">{peak.year}</span>
+          <span className="pls-stat-l">Año pico ({nf.format(peak.count)})</span>
+        </div>
+      </div>
+
+      <div className="pls-section">
+        <div className="pls-section-h">Reportes por año{d.estimated ? " · estimado" : ""}</div>
+        <div className="pls-years">
+          {years.map(y => (
+            <div key={y.year} className="pls-year" title={`${y.year}: ${nf.format(y.count)} hurtos`}>
+              <span
+                className="pls-year-bar"
+                style={{ height: Math.max(4, Math.round((y.count / max) * 92)), opacity: y.year === peak.year ? 1 : 0.5 }}
+              ></span>
+              <span className="pls-year-lbl">{String(y.year).slice(2)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {d.estimated && (
+        <p className="pls-foot-mute">
+          Estimado: la base no desagrega los hurtos por barrio y año, así que se reparte la
+          serie anual de la comuna según el peso histórico del barrio. El total del barrio sí es real.
+        </p>
+      )}
     </aside>
   );
 }
