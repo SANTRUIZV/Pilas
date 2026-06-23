@@ -301,6 +301,10 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
   border-radius: var(--pls-r-2);
   background: var(--pls-bg-2);
   overflow: hidden;
+  /* Hijo flex de .gov-rail-body (columna con altura acotada): sin esto, como la
+     tarjeta tiene overflow:hidden su min-height:auto colapsa a 0 y flexbox la
+     comprime, recortando botones, toggle y pie. flex:none la deja a su altura. */
+  flex: none;
 }
 .gov-alert-hd {
   display: grid;
