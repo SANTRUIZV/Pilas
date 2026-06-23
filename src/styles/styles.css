@@ -76,6 +76,9 @@ button { font-family: inherit; color: inherit; }
   grid-template-columns: 290px 1fr 360px;
   min-height: 0;
   position: relative;
+  /* Aísla los z-index internos de Leaflet (panes 200-700, controles ~1000)
+     para que no se escapen y tapen el dropdown del buscador en el header. */
+  isolation: isolate;
 }
 
 @media (max-width: 1400px) {
