@@ -54,6 +54,8 @@ export const api = {
   // Gobierno
   govYears: () => get("/gov/years"),
   govKpi: (year) => get(`/gov/kpi${q({ year })}`),
+  govExplain: (comuna, hour) => get(`/gov/explain${q({ comuna, hour })}`),
+  govBriefing: (year) => get(`/gov/briefing${q({ year })}`),
   govSeries: (days = 90, crimes, year) => get(`/gov/series${q({ days, crimes: crimes?.join(","), year })}`),
   govAlerts: (year) => get(`/gov/alerts${q({ year })}`),
   govPatrols: () => get("/gov/patrols"),

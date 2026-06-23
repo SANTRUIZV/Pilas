@@ -524,6 +524,149 @@ def recommend_patrols(cai_list: list[dict] | None = None, hours_ahead: int = 4) 
     return raw[:LIMIT]
 
 
+# ── Resumen en lenguaje natural (briefing por plantilla) ─────────────────────
+def _comuna_names() -> dict[int, str]:
+    """Nº de comuna → nombre de una zona representativa (del frontend embebido)."""
+    from . import data as _d
+    name_by: dict[int, str] = {}
+    for z in _d.ZONES:
+        raw = str(z.get("comuna", "")).replace("Comuna", "").strip()
+        if raw.isdigit() and int(raw) not in name_by:
+            name_by[int(raw)] = z["name"]
+    return name_by
+
+
+def briefing_payload(roc_auc: float | None = None, year: int | None = None) -> dict:
+    """Briefing operativo del día en lenguaje natural, redactado por plantilla
+    (sin LLM) a partir de los KPIs, las alertas detectadas y la recomendación de
+    patrullas. Pensado para que un funcionario lea «qué pasó, dónde reforzar y por
+    qué» en segundos. Determinista y sin costo."""
+    inc = _load_incidents()
+    if not inc:
+        return briefing_fallback()
+    from datetime import datetime
+
+    kpi = kpi_payload(roc_auc=roc_auc, year=year)
+    alerts = detect_alerts(year=year)
+    patrols = recommend_patrols()
+    names = _comuna_names()
+
+    y = kpi.get("year")
+    prev = kpi.get("previousYear")
+    inc7 = kpi.get("incidents7d", 0)
+    inc_delta = kpi.get("incidentsDelta", 0.0)
+    night7 = kpi.get("secondary7d", 0)
+    night_share = round(night7 / inc7 * 100) if inc7 else 0
+    acc = kpi.get("predAccuracy", 0)
+
+    highs = [a for a in alerts if a["severity"] == "high"]
+
+    arrow = "▼" if inc_delta < 0 else "▲" if inc_delta > 0 else "→"
+    trend_word = "una reducción" if inc_delta < 0 else "un aumento" if inc_delta > 0 else "estabilidad"
+
+    if prev:
+        headline = (f"Cierre {y}: {inc7} hurtos en la última semana "
+                    f"({arrow} {abs(inc_delta):.1f}% vs {prev})")
+    else:
+        headline = f"Cierre {y}: {inc7} hurtos en la última semana"
+
+    paragraphs: list[str] = []
+    p1 = (f"En la semana de referencia (cierre de {y}) se registraron alrededor de "
+          f"{inc7} hurtos a personas")
+    if prev:
+        p1 += (f", {trend_word} del {abs(inc_delta):.1f}% frente al mismo periodo de {prev}.")
+    else:
+        p1 += "."
+    if inc7:
+        p1 += (f" De estos, {night7} ocurrieron en franja nocturna (18:00–06:00), "
+               f"el {night_share}% del total — el horario donde conviene concentrar el patrullaje.")
+    paragraphs.append(p1)
+
+    if highs:
+        zonas = ", ".join(names.get(a.get("comuna"), a["zone"]) for a in highs[:3])
+        paragraphs.append(
+            f"El modelo detectó {len(highs)} zona(s) con anomalía crítica: {zonas}. "
+            f"Son comunas cuyo conteo del último año se desvía más de 1.5σ del promedio "
+            f"histórico, por lo que requieren atención prioritaria."
+        )
+    elif alerts:
+        paragraphs.append(
+            f"No hay anomalías críticas esta semana; las {len(alerts)} alertas activas son de "
+            f"severidad media o baja y se recomienda monitoreo con cámaras móviles."
+        )
+
+    high_patrols = [p for p in patrols if p["demand"] == "high"][:3]
+    if high_patrols:
+        cais = ", ".join(p["cai"] for p in high_patrols)
+        extra = sum(p["recommended"] - p["current"] for p in patrols)
+        paragraphs.append(
+            f"Según el riesgo previsto por el modelo para las próximas horas, se sugiere reforzar "
+            f"{cais}. En conjunto, el modelo recomienda {extra:+d} unidades sobre la asignación base."
+        )
+
+    paragraphs.append(
+        f"El modelo de riesgo opera con una precisión (ROC-AUC) del {acc:.1f}%, "
+        + ("usando el XGBoost entrenado con datos reales de la Alcaldía."
+           if roc_auc else "en modo analítico de respaldo.")
+    )
+
+    actions: list[dict] = []
+    for a in highs[:3]:
+        actions.append({"priority": "alta",
+                        "text": f"{a['suggestion']} · {names.get(a.get('comuna'), a['zone'])}"})
+    for p in high_patrols[:2]:
+        actions.append({"priority": "alta",
+                        "text": f"Asignar {p['recommended']} unidades a {p['cai']}"})
+    if not actions and alerts:
+        actions.append({"priority": "media", "text": alerts[0]["suggestion"]})
+
+    return {
+        "year": y,
+        "referenceDate": kpi.get("referenceDate"),
+        "generatedAt": datetime.now().strftime("%H:%M"),
+        "headline": headline,
+        "paragraphs": paragraphs,
+        "actions": actions,
+        "stats": {
+            "incidents7d": inc7, "incidentsDelta": inc_delta,
+            "night7d": night7, "nightShare": night_share,
+            "activeAlerts": len(alerts), "criticalAlerts": len(highs),
+            "accuracy": acc,
+        },
+        "source": "model" if roc_auc else "analytic",
+    }
+
+
+def briefing_fallback() -> dict:
+    """Briefing en modo demo (sin dataset histórico cargado en el backend)."""
+    from datetime import datetime
+    from . import data as _d
+    k = _d.KPI
+    alerts = _d.ALERTS
+    highs = [a for a in alerts if a.get("severity") == "high"]
+    paragraphs = [
+        f"Se registraron {k['incidents7d']} incidentes en los últimos 7 días "
+        f"({k['incidentsDelta']:+.1f}% vs el periodo anterior). "
+        f"Hay {k['activeAlerts']} alertas activas en seguimiento.",
+    ]
+    if highs:
+        paragraphs.append("Zonas con alerta crítica: " + ", ".join(a["zone"] for a in highs[:3]) + ".")
+    paragraphs.append("Datos en modo demostración (backend sin dataset histórico cargado).")
+    return {
+        "year": None,
+        "referenceDate": None,
+        "generatedAt": datetime.now().strftime("%H:%M"),
+        "headline": f"{k['incidents7d']} incidentes · {k['activeAlerts']} alertas activas",
+        "paragraphs": paragraphs,
+        "actions": [{"priority": "alta", "text": a["suggestion"]} for a in highs[:3]],
+        "stats": {
+            "incidents7d": k["incidents7d"], "incidentsDelta": k["incidentsDelta"],
+            "activeAlerts": k["activeAlerts"], "criticalAlerts": len(highs),
+        },
+        "source": "demo",
+    }
+
+
 # ── Feed de actividad ───────────────────────────────────────────────────────
 def feed_payload() -> list[dict]:
     """Feed armado con eventos derivados del modelo y las alertas detectadas."""

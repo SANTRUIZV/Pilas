@@ -273,6 +273,35 @@ def gov_kpi(year: int | None = Query(default=None, ge=2000, le=2100)) -> dict:
     return data.KPI
 
 
+@app.get("/gov/explain", tags=["gobierno"])
+def gov_explain(
+    comuna: int = Query(..., ge=1, le=22, description="Número de comuna (1–22)"),
+    hour: int = Query(default=None, ge=0, le=23, description="Hora 0–23; por defecto la actual"),
+) -> dict:
+    """Explicabilidad del modelo para una comuna: contribución de cada factor
+    (comuna, hora, día, festivo…) al riesgo previsto. Positivo = sube, negativo =
+    baja. 503 si el modelo no está cargado (modo analítico no tiene explicabilidad)."""
+    h = datetime.now().hour if hour is None else hour
+    pseudo = {
+        "id": f"comuna-{comuna}", "name": f"Comuna {comuna}",
+        "comuna": f"Comuna {comuna}", "baseRisk": data.comuna_base_risk(comuna),
+    }
+    exp = risk_model.explain(pseudo, h)
+    if exp is None:
+        raise HTTPException(503, "Modelo no disponible (sin explicabilidad en modo analítico)")
+    return {"comuna": comuna, "hour": h, **exp}
+
+
+@app.get("/gov/briefing", tags=["gobierno"])
+def gov_briefing(year: int | None = Query(default=None, ge=2000, le=2100)) -> dict:
+    """Resumen operativo del día en lenguaje natural, redactado por plantilla a
+    partir de KPIs, alertas y recomendación de patrullas (sin LLM externo)."""
+    if gov_stats.is_ready():
+        roc = (risk_model.meta or {}).get("metrics", {}).get("roc_auc") if risk_model.is_loaded else None
+        return gov_stats.briefing_payload(roc_auc=roc, year=year)
+    return gov_stats.briefing_fallback()
+
+
 @app.get("/gov/series", tags=["gobierno"])
 def gov_series(
     days: int = Query(default=90, ge=7, le=365),

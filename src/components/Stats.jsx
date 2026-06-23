@@ -177,7 +177,7 @@ function Kpi({ value, label, accent }) {
 }
 
 // ── Historical dashboard (datos de la base) ───────────────────────────────
-function HistoricalDash({ palette }) {
+export function HistoricalDash({ palette }) {
   const { data: s, live: isLive } = useApiData(api.stats, STATS_FALLBACK, []);
   // Si el backend responde {} (no listo), usar el fallback.
   const d = s && s.totalIncidents ? s : STATS_FALLBACK;
@@ -340,7 +340,7 @@ function localForecast() {
   return { comunas, matrix, cityByHour, generatedHour: new Date().getHours(), source: "analytic" };
 }
 
-function ForecastDash({ palette }) {
+export function ForecastDash({ palette }) {
   const { data: f, live } = useApiData(api.riskForecast, null, []);
   const fc = f && f.matrix ? f : localForecast();
   const online = live && f && f.matrix && fc.source === "model";

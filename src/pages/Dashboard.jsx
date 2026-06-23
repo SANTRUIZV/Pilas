@@ -1,10 +1,24 @@
 // Pilas Gov Dashboard — Secretaría de Seguridad
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import MapH3 from "../components/MapH3.jsx";
-import { CRIMES, METRICS } from "../data/data.js";
+import { HistoricalDash, ForecastDash } from "../components/Stats.jsx";
+import { CRIMES, METRICS, ZONES } from "../data/data.js";
 import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "../data/data-gov.js";
 import { useApiStatus, useApiData } from "../lib/hooks.js";
 import { api } from "../lib/api.js";
+
+// Paleta de riesgo del dashboard (verde→rojo), compartida por mapa y charts.
+const GOV_PALETTE = ["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"];
+
+// Nº de comuna → id de zona representativa (para enfocar el mapa desde una alerta).
+const ZONE_ID_BY_COMUNA = (() => {
+  const m = {};
+  for (const z of ZONES) {
+    const n = parseInt(String(z.comuna).replace("Comuna", "").trim(), 10);
+    if (!Number.isNaN(n) && !(n in m)) m[n] = z.id;
+  }
+  return m;
+})();
 
 // Traduce el selector del header a días para la API de series.
 const PERIOD_DAYS = { "7d": 14, "30d": 30, "90d": 90, "6m": 180, "1a": 365 };
@@ -328,33 +342,87 @@ function ComunaTable({ year }) {
   );
 }
 
+// ── Explicabilidad del modelo (¿por qué esta alerta?) ───────────────────
+// Reusa /gov/explain (contribución SHAP de cada factor del XGBoost para la
+// comuna a la hora actual). Solo aparece si hay modelo cargado detrás.
+function AlertExplain({ comuna, hour }) {
+  const { data: exp } = useApiData(() => api.govExplain(comuna, hour), null, [comuna, hour]);
+  if (!exp?.factors?.length) {
+    return (
+      <div className="gov-explain gov-explain--empty">
+        Explicabilidad disponible solo con el modelo XGBoost activo.
+      </div>
+    );
+  }
+  const max = Math.max(...exp.factors.map(f => Math.abs(f.impact))) || 1;
+  return (
+    <div className="gov-explain">
+      <div className="gov-explain-h">¿Por qué? · contribución de cada factor</div>
+      <ul className="pls-factors">
+        {exp.factors.map(f => (
+          <li key={f.factor}>
+            <span className="pls-factor-label">{f.label}</span>
+            <span className="pls-factor-bar">
+              <span className={"pls-factor-fill " + (f.impact > 0 ? "is-up" : "is-down")}
+                style={{ width: Math.max(6, Math.abs(f.impact) / max * 100) + "%" }}></span>
+            </span>
+            <span className={"pls-factor-dir " + (f.impact > 0 ? "is-up" : "is-down")}>
+              {f.impact > 0 ? "▲ sube" : "▼ baja"}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="pls-factor-note">Según el modelo, para esta comuna a las {String(hour).padStart(2, "0")}:00</div>
+    </div>
+  );
+}
+
 // ── Alerts ─────────────────────────────────────────────────────────────
-function AlertsList({ year }) {
+function AlertsList({ year, assigned, onAssign, onShowOnMap }) {
   const { data: alerts } = useApiData(() => api.govAlerts(year), ALERTS, [year]);
+  const [openId, setOpenId] = useState(null);
+  const hour = new Date().getHours();
   return (
     <>
-      {alerts.map(a => (
-        <div key={a.id} className={"gov-alert is-" + a.severity}>
-          <div className="gov-alert-hd">
-            <div className="gov-alert-bar"></div>
-            <div>
-              <div className="gov-alert-zone">{a.zone}</div>
-              <div className="gov-alert-kind">{a.kind} · {a.since}</div>
+      {alerts.map(a => {
+        const isAssigned = assigned.has(a.id);
+        const open = openId === a.id;
+        return (
+          <div key={a.id} className={"gov-alert is-" + a.severity}>
+            <div className="gov-alert-hd">
+              <div className="gov-alert-bar"></div>
+              <div>
+                <div className="gov-alert-zone">{a.zone}</div>
+                <div className="gov-alert-kind">{a.kind} · {a.since}</div>
+              </div>
+              <span className="gov-alert-sev">{a.severity === "high" ? "CRÍTICA" : a.severity === "medium" ? "MEDIA" : "BAJA"}</span>
             </div>
-            <span className="gov-alert-sev">{a.severity === "high" ? "CRÍTICA" : a.severity === "medium" ? "MEDIA" : "BAJA"}</span>
+            <div className="gov-alert-detail">{a.detail}</div>
+            <div className="gov-alert-action">{a.suggestion}</div>
+            <div className="gov-alert-btns">
+              <button className={"gov-primary" + (isAssigned ? " is-assigned" : "")}
+                onClick={() => onAssign(a)} disabled={isAssigned}>
+                {isAssigned ? "✓ Patrulla asignada" : "Asignar patrulla"}
+              </button>
+              <button onClick={() => onShowOnMap(a)}
+                disabled={a.comuna == null}
+                title={a.comuna == null ? "Sin comuna asociada" : "Centrar el mapa en esta zona"}>
+                Ver en mapa
+              </button>
+            </div>
+            {a.comuna != null && (
+              <button className="gov-explain-toggle" onClick={() => setOpenId(open ? null : a.id)}>
+                {open ? "Ocultar explicación del modelo ▲" : "¿Por qué esta alerta? ▼"}
+              </button>
+            )}
+            {open && a.comuna != null && <AlertExplain comuna={a.comuna} hour={hour} />}
+            <div className="gov-alert-foot">
+              <span>Confianza modelo</span>
+              <span>{Math.round(a.confidence * 100)}%</span>
+            </div>
           </div>
-          <div className="gov-alert-detail">{a.detail}</div>
-          <div className="gov-alert-action">{a.suggestion}</div>
-          <div className="gov-alert-btns">
-            <button className="gov-primary">Asignar patrulla</button>
-            <button>Ver en mapa</button>
-          </div>
-          <div className="gov-alert-foot">
-            <span>Confianza modelo</span>
-            <span>{Math.round(a.confidence * 100)}%</span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }
@@ -429,7 +497,7 @@ function CuadrantesList() {
 }
 
 // ── Map block (reuses MapView) ─────────────────────────────────────────
-function GovMap({ year }) {
+function GovMap({ year, focusZoneId, focusLabel, onClearFocus }) {
   const { data: alerts } = useApiData(() => api.govAlerts(year), ALERTS, [year]);
   const { data: k } = useApiData(() => api.govKpi(year), KPI, [year]);
   // Hora del día para el modelo: la actual local del cliente. Así el coloreado
@@ -442,11 +510,15 @@ function GovMap({ year }) {
   return (
     <div className="gov-map-block">
       <MapH3 theme="dark" vizType="hex" hour={hour}
-        palette={["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"]}
-        showCAI={true} zoomPosition="topright" />
+        palette={GOV_PALETTE}
+        showCAI={true} zoomPosition="topright"
+        selectedZoneId={focusZoneId} />
       <div className="gov-map-overlay">
-        <div className="gov-map-overlay-eyebrow">{sub}</div>
-        <div className="gov-map-overlay-h">{headline}</div>
+        <div className="gov-map-overlay-eyebrow">{focusLabel ? "Alerta enfocada" : sub}</div>
+        <div className="gov-map-overlay-h">{focusLabel || headline}</div>
+        {focusLabel && (
+          <button className="gov-map-overlay-clear" onClick={onClearFocus}>Quitar foco ✕</button>
+        )}
       </div>
     </div>
   );
@@ -470,13 +542,85 @@ function GovFooter() {
   );
 }
 
+// ── Briefing operativo (resumen en lenguaje natural · plantilla) ────────
+function GovBriefing({ year }) {
+  const { data: b } = useApiData(() => api.govBriefing(year), null, [year]);
+  if (!b) return <div className="gov-brief-empty">Generando resumen operativo…</div>;
+  const s = b.stats || {};
+  const srcLabel = b.source === "model" ? "modelo XGBoost"
+    : b.source === "demo" ? "modo demo" : "modo analítico";
+  return (
+    <div className="gov-brief">
+      <div className="gov-brief-eyebrow">
+        Briefing operativo · generado {b.generatedAt} · {srcLabel}
+      </div>
+      <h3 className="gov-brief-headline">{b.headline}</h3>
+      <div className="gov-brief-stats">
+        <div><b>{s.incidents7d ?? "—"}</b><span>hurtos · 7d</span></div>
+        <div><b>{s.criticalAlerts ?? 0}</b><span>alertas críticas</span></div>
+        <div><b>{s.activeAlerts ?? 0}</b><span>alertas activas</span></div>
+        {s.nightShare != null && <div><b>{s.nightShare}%</b><span>nocturnos</span></div>}
+      </div>
+      <div className="gov-brief-body">
+        {b.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+      </div>
+      {b.actions?.length > 0 && (
+        <div className="gov-brief-actions">
+          <div className="gov-brief-actions-h">Acciones sugeridas</div>
+          <ul>
+            {b.actions.map((a, i) => (
+              <li key={i} className={"is-" + a.priority}>
+                <span className="gov-brief-prio">{a.priority}</span>{a.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="gov-brief-foot">
+        Redactado automáticamente por plantilla a partir de los KPIs, las alertas detectadas
+        y la recomendación de patrullas. Sin generación por LLM externo.
+      </div>
+    </div>
+  );
+}
+
+// ── Centro de inteligencia (briefing · pronóstico 24h · perfil) ─────────
+function GovIntel({ year }) {
+  const [tab, setTab] = useState("brief");
+  return (
+    <section className="gov-intel">
+      <div className="gov-intel-tabs">
+        <button className={tab === "brief" ? "is-on" : ""} onClick={() => setTab("brief")}>◆ Briefing</button>
+        <button className={tab === "forecast" ? "is-on" : ""} onClick={() => setTab("forecast")}>◈ Pronóstico 24h</button>
+        <button className={tab === "profile" ? "is-on" : ""} onClick={() => setTab("profile")}>▤ Perfil del delito</button>
+      </div>
+      <div className="gov-intel-body">
+        {tab === "brief" && <GovBriefing year={year} />}
+        {tab === "forecast" && <div className="pls-sv gov-intel-sv"><ForecastDash palette={GOV_PALETTE} /></div>}
+        {tab === "profile" && <div className="pls-sv gov-intel-sv"><HistoricalDash palette={GOV_PALETTE} /></div>}
+      </div>
+    </section>
+  );
+}
+
 // ── App ────────────────────────────────────────────────────────────────
 export default function App() {
   const [period, setPeriod] = useState("90d");
   const [tab, setTab] = useState("series");
   const [railTab, setRailTab] = useState("alerts");
   const [year, setYear] = useState(null);  // null = backend usa el último año completo
+  const [assigned, setAssigned] = useState(() => new Set()); // alertas con patrulla asignada
+  const [focus, setFocus] = useState(null); // { zoneId, label } para enfocar el mapa
+  const centerRef = useRef(null);
   const status = useApiStatus();
+
+  const handleAssign = (a) =>
+    setAssigned(prev => { const n = new Set(prev); n.add(a.id); return n; });
+  const handleShowOnMap = (a) => {
+    const zoneId = a.comuna != null ? ZONE_ID_BY_COMUNA[a.comuna] : null;
+    setFocus({ zoneId, label: a.zone });
+    centerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Catálogo de años disponibles del backend. Cuando llega el default sugerido
   // (último año completo), se fija como year inicial.
@@ -493,8 +637,9 @@ export default function App() {
       <div className="gov-main">
         <KPIRow year={year} />
 
-        <div className="gov-center">
-          <GovMap year={year} />
+        <div className="gov-center" ref={centerRef}>
+          <GovMap year={year} focusZoneId={focus?.zoneId} focusLabel={focus?.label}
+            onClearFocus={() => setFocus(null)} />
           <div>
             <div className="gov-tabs">
               <button className={tab === "series" ? "is-on" : ""} onClick={() => setTab("series")}>Series por delito</button>
@@ -512,12 +657,15 @@ export default function App() {
             <button className={railTab === "cuad" ? "is-on" : ""} onClick={() => setRailTab("cuad")}>Cuadrantes</button>
           </div>
           <div className="gov-rail-body">
-            {railTab === "alerts"  && <AlertsList year={year} />}
+            {railTab === "alerts"  && <AlertsList year={year} assigned={assigned}
+                                        onAssign={handleAssign} onShowOnMap={handleShowOnMap} />}
             {railTab === "patrols" && <PatrolsList />}
             {railTab === "feed"    && <FeedList />}
             {railTab === "cuad"    && <CuadrantesList />}
           </div>
         </div>
+
+        <GovIntel year={year} />
       </div>
       <GovFooter />
     </div>
