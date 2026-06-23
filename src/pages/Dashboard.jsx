@@ -343,10 +343,11 @@ function ComunaTable({ year }) {
 }
 
 // ── Explicabilidad del modelo (¿por qué esta alerta?) ───────────────────
-// Reusa /gov/explain (contribución SHAP de cada factor del XGBoost para la
-// comuna a la hora actual). Solo aparece si hay modelo cargado detrás.
-function AlertExplain({ comuna, hour }) {
-  const { data: exp } = useApiData(() => api.govExplain(comuna, hour), null, [comuna, hour]);
+// Usa /risk/explain (contribución SHAP de cada factor del XGBoost). Explica la
+// zona representativa de la comuna: como el modelo es por comuna, los factores
+// son los mismos. Solo aparece si hay modelo cargado detrás.
+function AlertExplain({ zoneId, hour }) {
+  const { data: exp } = useApiData(() => api.riskExplain(zoneId, hour), null, [zoneId, hour]);
   if (!exp?.factors?.length) {
     return (
       <div className="gov-explain gov-explain--empty">
@@ -387,6 +388,7 @@ function AlertsList({ year, assigned, onAssign, onShowOnMap }) {
       {alerts.map(a => {
         const isAssigned = assigned.has(a.id);
         const open = openId === a.id;
+        const zoneId = a.comuna != null ? ZONE_ID_BY_COMUNA[a.comuna] : null;
         return (
           <div key={a.id} className={"gov-alert is-" + a.severity}>
             <div className="gov-alert-hd">
@@ -405,17 +407,17 @@ function AlertsList({ year, assigned, onAssign, onShowOnMap }) {
                 {isAssigned ? "✓ Patrulla asignada" : "Asignar patrulla"}
               </button>
               <button onClick={() => onShowOnMap(a)}
-                disabled={a.comuna == null}
-                title={a.comuna == null ? "Sin comuna asociada" : "Centrar el mapa en esta zona"}>
+                disabled={zoneId == null}
+                title={zoneId == null ? "Sin comuna asociada" : "Centrar el mapa en esta zona"}>
                 Ver en mapa
               </button>
             </div>
-            {a.comuna != null && (
+            {zoneId != null && (
               <button className="gov-explain-toggle" onClick={() => setOpenId(open ? null : a.id)}>
                 {open ? "Ocultar explicación del modelo ▲" : "¿Por qué esta alerta? ▼"}
               </button>
             )}
-            {open && a.comuna != null && <AlertExplain comuna={a.comuna} hour={hour} />}
+            {open && zoneId != null && <AlertExplain zoneId={zoneId} hour={hour} />}
             <div className="gov-alert-foot">
               <span>Confianza modelo</span>
               <span>{Math.round(a.confidence * 100)}%</span>
@@ -542,19 +544,71 @@ function GovFooter() {
   );
 }
 
+// Briefing compuesto en el cliente a partir de los KPIs y alertas (mismos datos
+// que ya consume el dashboard). Sirve de respaldo cuando el endpoint /gov/briefing
+// del backend aún no está disponible, sin LLM y de forma determinista.
+function localBriefing(kpi = {}, alerts = []) {
+  const inc7 = kpi.incidents7d ?? 0;
+  const delta = kpi.incidentsDelta ?? 0;
+  const night7 = kpi.secondary7d;
+  const nightShare = night7 != null && inc7 ? Math.round((night7 / inc7) * 100) : null;
+  const acc = kpi.predAccuracy ?? 73;
+  const y = kpi.year, prev = kpi.previousYear;
+  const highs = alerts.filter(a => a.severity === "high");
+  const arrow = delta < 0 ? "▼" : delta > 0 ? "▲" : "→";
+  const trend = delta < 0 ? "una reducción" : delta > 0 ? "un aumento" : "estabilidad";
+
+  const headline = y
+    ? `Cierre ${y}: ${inc7} hurtos en la última semana (${arrow} ${Math.abs(delta).toFixed(1)}%${prev ? " vs " + prev : ""})`
+    : `${inc7} incidentes · ${alerts.length} alertas activas`;
+
+  const paragraphs = [];
+  let p1 = `En la última semana${y ? " (cierre de " + y + ")" : ""} se registraron alrededor de ${inc7} incidentes`;
+  if (prev) p1 += `, ${trend} del ${Math.abs(delta).toFixed(1)}% frente a ${prev}.`;
+  else p1 += `, ${arrow} ${Math.abs(delta).toFixed(1)}% respecto al periodo anterior.`;
+  if (nightShare != null) p1 += ` De estos, ${night7} ocurrieron en franja nocturna (18:00–06:00), el ${nightShare}% del total — el horario donde conviene concentrar el patrullaje.`;
+  paragraphs.push(p1);
+
+  if (highs.length) {
+    const zonas = highs.slice(0, 3).map(a => a.zone).join(", ");
+    paragraphs.push(`El modelo detectó ${highs.length} zona(s) con anomalía crítica: ${zonas}. Requieren atención prioritaria.`);
+  } else if (alerts.length) {
+    paragraphs.push(`No hay anomalías críticas esta semana; las ${alerts.length} alertas activas son de severidad media o baja y se recomienda monitoreo con cámaras móviles.`);
+  }
+  paragraphs.push(`El modelo de riesgo opera con una precisión (ROC-AUC) del ${Number(acc).toFixed(1)}%.`);
+
+  const actions = highs.slice(0, 3).map(a => ({ priority: "alta", text: `${a.suggestion} · ${a.zone}` }));
+  if (!actions.length && alerts.length) actions.push({ priority: "media", text: alerts[0].suggestion });
+
+  return {
+    headline, paragraphs, actions,
+    year: y || null,
+    referenceDate: kpi.referenceDate || null,
+    generatedAt: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+    source: "local",
+    stats: { incidents7d: inc7, incidentsDelta: delta, activeAlerts: alerts.length, criticalAlerts: highs.length, nightShare },
+  };
+}
+
 // ── Briefing operativo (resumen en lenguaje natural · plantilla) ────────
 function GovBriefing({ year }) {
+  // Intenta el briefing del backend; si no está (endpoint nuevo aún no
+  // desplegado), lo compone en el cliente con los KPIs y alertas reales.
   const { data: b } = useApiData(() => api.govBriefing(year), null, [year]);
-  if (!b) return <div className="gov-brief-empty">Generando resumen operativo…</div>;
-  const s = b.stats || {};
-  const srcLabel = b.source === "model" ? "modelo XGBoost"
-    : b.source === "demo" ? "modo demo" : "modo analítico";
+  const { data: kpi } = useApiData(() => api.govKpi(year), KPI, [year]);
+  const { data: alerts } = useApiData(() => api.govAlerts(year), ALERTS, [year]);
+  const brief = b || localBriefing(kpi, alerts);
+  const s = brief.stats || {};
+  const srcLabel = brief.source === "model" ? "modelo XGBoost"
+    : brief.source === "demo" ? "modo demo"
+    : brief.source === "local" ? "resumen local"
+    : "modo analítico";
   return (
     <div className="gov-brief">
       <div className="gov-brief-eyebrow">
-        Briefing operativo · generado {b.generatedAt} · {srcLabel}
+        Briefing operativo · generado {brief.generatedAt} · {srcLabel}
       </div>
-      <h3 className="gov-brief-headline">{b.headline}</h3>
+      <h3 className="gov-brief-headline">{brief.headline}</h3>
       <div className="gov-brief-stats">
         <div><b>{s.incidents7d ?? "—"}</b><span>hurtos · 7d</span></div>
         <div><b>{s.criticalAlerts ?? 0}</b><span>alertas críticas</span></div>
@@ -562,13 +616,13 @@ function GovBriefing({ year }) {
         {s.nightShare != null && <div><b>{s.nightShare}%</b><span>nocturnos</span></div>}
       </div>
       <div className="gov-brief-body">
-        {b.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+        {brief.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
       </div>
-      {b.actions?.length > 0 && (
+      {brief.actions?.length > 0 && (
         <div className="gov-brief-actions">
           <div className="gov-brief-actions-h">Acciones sugeridas</div>
           <ul>
-            {b.actions.map((a, i) => (
+            {brief.actions.map((a, i) => (
               <li key={i} className={"is-" + a.priority}>
                 <span className="gov-brief-prio">{a.priority}</span>{a.text}
               </li>
