@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import config, data, gov_stats, stats
+from . import tourism as tourism_svc  # alias: evita chocar con el endpoint def tourism()
 from .model import risk_model
 from .schemas import (
     CrimeShare, Health, HourRisk, RiskOut, Service, ZoneDetailOut, ZoneOut,
@@ -341,3 +342,16 @@ def gov_comunas(year: int | None = Query(default=None, ge=2000, le=2100)) -> lis
     if gov_stats.is_ready():
         return gov_stats.comunas_table(data.ZONES, year=year)
     return data.comunas()
+
+
+# ── Turismo (clima + vuelos de Cali / CLO) ───────────────────────────────────
+@app.get("/tourism/weather", tags=["turismo"])
+def tourism_weather() -> dict:
+    """Clima actual y pronóstico 3 días de Cali (Open-Meteo, con fallback demo)."""
+    return tourism_svc.weather_payload()
+
+
+@app.get("/tourism/flights", tags=["turismo"])
+def tourism_flights(hours: int = Query(default=18, ge=2, le=48)) -> dict:
+    """Llegadas y salidas recientes del aeropuerto CLO (OpenSky, con fallback demo)."""
+    return tourism_svc.flights_payload(hours_back=hours)

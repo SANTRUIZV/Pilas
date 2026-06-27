@@ -16,3 +16,7 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# Secrets / entorno (no versionar credenciales)
+.env
+credentials.json

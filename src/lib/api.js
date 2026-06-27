@@ -61,4 +61,7 @@ export const api = {
   govPatrols: () => get("/gov/patrols"),
   govFeed: () => get("/gov/feed"),
   govComunas: (year) => get(`/gov/comunas${q({ year })}`),
+  // Turismo
+  weather: () => get("/tourism/weather"),
+  flights: (hours) => get(`/tourism/flights${q({ hours })}`),
 };

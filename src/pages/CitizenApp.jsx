@@ -5,6 +5,7 @@ import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, BARRIOS, normText, riskClass, 
 import { COMUNAS } from "../data/comunas.js";
 import { ZoneDetail, RoutePlanner, ReportsFeed, Trends, BarrioPanel } from "../components/Panels.jsx";
 import StatsView from "../components/Stats.jsx";
+import Travel from "../components/Travel.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "../components/Tweaks.jsx";
 import { useApiStatus, useRiskMap, useApiData, useComunaRisk } from "../lib/hooks.js";
 import { api } from "../lib/api.js";
@@ -91,9 +92,9 @@ function HeaderSearch({ barriosList, onSelectBarrio, audience }) {
 
 function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList, onSelectBarrio }) {
   const labels = audience === "tourist" ? {
-    map: "Map", stats: "Statistics", routes: "Safe routes", trends: "Insights", reports: "Reports"
+    map: "Map", stats: "Statistics", routes: "Safe routes", trends: "Insights", reports: "Reports", travel: "Travel"
   } : {
-    map: "Mapa", stats: "Estadísticas", routes: "Rutas", trends: "Pulso", reports: "Reportes"
+    map: "Mapa", stats: "Estadísticas", routes: "Rutas", trends: "Pulso", reports: "Reportes", travel: "Viaje"
   };
   // Estado de conexión: en vivo (modelo) · en vivo (analítico) · demo (sin API)
   const live = status?.online;
@@ -110,6 +111,7 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList
         <button className={screen === "stats" ? "is-on" : ""} onClick={() => setScreen("stats")}>{labels.stats}</button>
         <button className={screen === "routes" ? "is-on" : ""} onClick={() => setScreen("routes")}>{labels.routes}</button>
         <button className={screen === "reports" ? "is-on" : ""} onClick={() => setScreen("reports")}>{labels.reports}</button>
+        <button className={screen === "travel" ? "is-on" : ""} onClick={() => setScreen("travel")}>{labels.travel}</button>
       </nav>
       <div className="pls-hd-actions">
         <HeaderSearch barriosList={barriosList} onSelectBarrio={onSelectBarrio} audience={audience} />
@@ -311,7 +313,7 @@ export default function App() {
   // (p. ej. ciudadano.html#estadisticas) para compartir cada vista.
   const [screen, setScreen] = useState(() => {
     const h = (typeof window !== "undefined" ? window.location.hash : "").replace("#", "").toLowerCase();
-    return { estadisticas: "stats", stats: "stats", previsto: "stats", forecast: "stats", rutas: "routes", pulso: "trends", reportes: "reports", mapa: "map" }[h] || "map";
+    return { estadisticas: "stats", stats: "stats", previsto: "stats", forecast: "stats", rutas: "routes", pulso: "trends", reportes: "reports", mapa: "map", viaje: "travel", travel: "travel" }[h] || "map";
   });
   // Arranca en la hora actual del dispositivo (9:20 → 9); el slider sigue
   // permitiendo moverla a cualquier hora.
@@ -355,6 +357,8 @@ export default function App() {
     rail = <Trends palette={t.palette} />;
   } else if (screen === "reports") {
     rail = <ReportsFeed onClose={() => setScreen("map")} />;
+  } else if (screen === "travel") {
+    rail = <Travel onClose={() => setScreen("map")} tourist={t.audience === "tourist"} />;
   } else if (screen === "routes") {
     rail = <RoutePlanner onClose={() => setScreen("map")} />;
   } else if (selectedBarrio) {
@@ -369,7 +373,7 @@ export default function App() {
   }
 
   return (
-    <div className="pls-app" data-screen-label={screen === "map" ? "01 Mapa" : screen === "stats" ? "02 Estadísticas" : screen === "routes" ? "03 Rutas" : screen === "trends" ? "04 Pulso" : "05 Reportes"}>
+    <div className="pls-app" data-screen-label={screen === "map" ? "01 Mapa" : screen === "stats" ? "02 Estadísticas" : screen === "routes" ? "03 Rutas" : screen === "trends" ? "04 Pulso" : screen === "travel" ? "06 Viaje" : "05 Reportes"}>
       <Header screen={screen} setScreen={setScreen} audience={t.audience} onOpenTweaks={() => setTweaksOpen(v => !v)} status={status}
         barriosList={barriosList} onSelectBarrio={selectBarrio} />
       {screen === "stats" ? (
