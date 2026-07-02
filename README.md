@@ -21,18 +21,32 @@ qué hace cada vista y muestra las cifras de las bases reales.
 
 ### App ciudadana (`ciudadano.html`)
 
-- **Mapa de riesgo** sobre **OpenStreetMap** (Leaflet) con **grilla hexagonal H3
-  de Uber**: cada hexágono se asigna a su comuna (Voronoi sobre los centroides de
-  las **22 comunas de Cali**) y se colorea por el riesgo del modelo a la hora
-  seleccionada. La resolución H3 cambia con el selector (Hex/Calor/Barrios).
+- **Mapa de atención** sobre **OpenStreetMap** (Leaflet) con **grilla hexagonal H3
+  de Uber**: cada hexágono se asigna a su comuna (límites reales IDESC de las
+  **22 comunas de Cali**) y se colorea por el riesgo del modelo a la hora
+  seleccionada. El modo **Barrios** dibuja los **339 barrios oficiales**
+  (polígonos reales del IDESC, carga diferida) con su histórico de hurtos.
+- **Capas con datos abiertos oficiales**: CAI, centros médicos, **63 sitios
+  turísticos e históricos** (Secretaría de Turismo · IDESC), **7 ríos** (OSM),
+  **88 estaciones del MIO** + Terminal de Transportes (Metro Cali) y **396
+  bahías oficiales de taxi** (DAPM).
 - **Scrubber 0–23h** que recolorea el mapa según el patrón horario.
-- **Detalle de zona** — índice de riesgo, patrón 24h, top delitos, recomendaciones
-  preventivas y servicios cercanos (CAI / hospital).
+- **Comunicación no estigmatizante**: paleta «Batería» sin rojo-peligro por
+  defecto, lenguaje de *nivel de atención* (no de peligrosidad de la gente),
+  nota metodológica visible y **escala relativa por hora** opcional (cuartiles
+  entre comunas) para que ninguna comuna quede clavada en el color máximo 24/7.
+- **Detalle de zona** — nivel de atención, patrón 24h, top delitos,
+  recomendaciones preventivas y servicios cercanos (CAI / hospital).
 - **Ruta segura** — comparador de ruta recomendada vs. directa.
-- **Pulso** — tendencias 7 días, hora de mayor riesgo, zonas más seguras y métricas
-  del modelo.
-- **Reportes ciudadanos** y **modo turista** (cambia idioma a inglés y resalta
-  sitios turísticos), tema claro/oscuro y paletas de riesgo (panel de Ajustes).
+- **Pulso** — tendencias 7 días, hora de mayor atención, zonas más seguras y
+  métricas del modelo.
+- **Viaje** — clima (Open-Meteo) y pronóstico, vuelos de CLO en vivo (OpenSky),
+  guía de buses intermunicipales de la Terminal, MIO y taxi seguro.
+- **Estadísticas** con pestaña **Fuentes · SIJIN/ML**: lista para integrar
+  homicidios y violencia intrafamiliar de SIJIN / Medicina Legal con solo dejar
+  un CSV en `backend/ml/datasets/external/` (ver README de esa carpeta).
+- **Reportes ciudadanos** y **modo turista** (cambia idioma a inglés y enciende
+  las capas de sitios y ríos), tema claro/oscuro y paletas (panel de Ajustes).
 
 ### Dashboard gubernamental (`gobierno.html`)
 
@@ -78,6 +92,11 @@ src/
     data.js           Zonas, CAI, hospitales, barrios, métricas, estadísticas
     data-gov.js       Datos del dashboard gubernamental
     comunas.js        Las 22 comunas de Cali (polígonos, sector, riesgo base)
+    barrios-geo.js    339 barrios oficiales (IDESC, polígonos · carga diferida)
+    sitios.js         63 sitios turísticos/históricos (IDESC Sec. Turismo + curados)
+    rios.js           Los 7 ríos de Cali (OpenStreetMap, polilíneas)
+    mio.js            88 estaciones del MIO (Metro Cali) + 396 bahías de taxi (DAPM)
+    transporte.js     Terminal de Transportes (guía curada) + tips de taxi seguro
   lib/               Integración con el backend
     api.js            Cliente HTTP del backend (FastAPI)
     hooks.js          Hooks: estado de conexión, mapa de riesgo, fetch genérico

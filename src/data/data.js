@@ -182,7 +182,8 @@ export const HOSPITALS = [
   { id: "h-clinica-imbanaco-s-a-s-sede-principal", name: "Clínica Imbanaco S.A.S. Sede Principal", lat: 3.42635, lon: -76.54528, phone: "6821000", address: "Cra. 38 Bis #5B2-04, Santa Isabel, Cali, Valle del Cauca" },
 ];
 
-// Touristic points
+// Touristic points (lista corta original). La capa «Sitios» del mapa usa ahora
+// el catálogo oficial completo de src/data/sitios.js (IDESC · Sec. de Turismo).
 export const TOURISM = [
   { id: "cristo-rey",   name: "Cristo Rey",          lat: 3.434, lon: -76.567, tip: "Visita antes de 5 pm; ruta de subida segura por Pance." },
   { id: "tres-cruces",  name: "Cerro de las Tres Cruces", lat: 3.461, lon: -76.560, tip: "Solo de día y acompañado; muy temprano (5-7 am)." },
@@ -236,7 +237,7 @@ export const METRICS = {
   f1: 0.819,
   rocAuc: 0.913,
   trainedOn: "1.2M registros · 2018–2025",
-  sources: ["Datos Abiertos Colombia", "SIEDCO – Policía Nacional", "DANE", "Observatorio de Seguridad Cali"],
+  sources: ["Datos Abiertos Colombia", "SIEDCO – Policía Nacional", "DANE", "Observatorio de Seguridad Cali", "IDESC – Alcaldía de Cali", "Metro Cali", "DAPM", "OpenStreetMap"],
   zonesCovered: 22,
   hexCount: 1804,
   lastUpdate: "20 may 2026 · 04:00",

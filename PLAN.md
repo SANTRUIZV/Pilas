@@ -211,6 +211,21 @@ viabilidad técnica y potencial de escalabilidad nacional.
 5. ✓ Mapa real: **OpenStreetMap (Leaflet) + hexágonos H3 (Uber)** sobre las 22
    comunas de Cali, coloreado por el modelo (`src/MapH3.jsx`). _(Pendiente
    opcional: límites GeoJSON reales de comunas para un choropleth de polígonos.)_
+6. ✓ **Retroalimentación del profesor (junio 2026)** — implementado:
+   - Sitios turísticos e históricos y ríos en el mapa (capa oficial
+     `turismo:it_recursos_turisticos` del IDESC + OSM) y **modo Barrios con los
+     339 polígonos reales** (`idesc:mc_barrios`).
+   - Anti-estigmatización: paleta «Batería» sin rojo por defecto, lenguaje de
+     *nivel de atención*, nota metodológica y escala relativa por hora
+     (cuartiles) para no fijar comunas populares en el color máximo.
+   - Buses (guía de la Terminal), MIO (estaciones Metro Cali), bahías de taxi
+     (DAPM) y vuelos/clima (ya existentes) en el panel Viaje.
+   - Población real por comuna (proyecciones DAPM 2020, Cali en Cifras /
+     datos.cali.gov.co) → tasas por 100k verídicas en el dashboard de gobierno.
+   - Integración lista para **SIJIN / Medicina Legal** (homicidios, violencia
+     intrafamiliar): CSV agregado en `backend/ml/datasets/external/` →
+     `/crimes/external` → pestaña «Fuentes» de Estadísticas. _(A la espera de
+     que consigamos esas bases.)_
 
 ---
 

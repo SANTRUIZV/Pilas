@@ -141,7 +141,7 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
       </div>
 
       <div className="pls-panel-meta">
-        <span>Riesgo a las {String(hour).padStart(2, "0")}:00 · franja {hour < 6 ? "madrugada" : hour < 12 ? "mañana" : hour < 18 ? "tarde" : "noche"}</span>
+        <span>Nivel de atención a las {String(hour).padStart(2, "0")}:00 · franja {hour < 6 ? "madrugada" : hour < 12 ? "mañana" : hour < 18 ? "tarde" : "noche"}</span>
       </div>
 
       <div className="pls-section">
@@ -170,7 +170,7 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
 
       {explain?.factors?.length > 0 && (
         <div className="pls-section">
-          <div className="pls-section-h">¿Por qué este riesgo?</div>
+          <div className="pls-section-h">¿Por qué este nivel?</div>
           <ul className="pls-factors">
             {(() => {
               const max = Math.max(...explain.factors.map(f => Math.abs(f.impact))) || 1;
@@ -232,7 +232,7 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
         <span>Fuente</span>
         <strong>{detail?.source === "model" ? "XGBoost" : live ? "Analítico" : "Demo"}</strong>
         <span className="pls-foot-mute">
-          {live ? "Riesgo servido por el API de Pilas · datos reales (Alcaldía 2010–2026)" : "Sin backend · datos demo locales"}
+          {live ? "Nivel de atención servido por el API de Pilas · datos reales (Alcaldía 2010–2026)" : "Sin backend · datos demo locales"}
         </span>
       </div>
     </aside>
@@ -348,7 +348,7 @@ export function Trends({ palette }) {
       </div>
 
       <div className="pls-section">
-        <div className="pls-section-h">Hora de mayor riesgo</div>
+        <div className="pls-section-h">Hora de mayor atención</div>
         <HourBars />
       </div>
 

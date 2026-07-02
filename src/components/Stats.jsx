@@ -432,10 +432,111 @@ export function ForecastDash({ palette }) {
   );
 }
 
-// ── Main view (pestañas: histórico vs previsto) ────────────────────────────
+// ── Fuentes externas (SIJIN · Medicina Legal · …) ──────────────────────────
+// Muestra las categorías cargadas en backend/ml/datasets/external/. Mientras el
+// equipo consigue esas bases, la pestaña explica cómo integrarlas: el objetivo
+// es que homicidios y violencia intrafamiliar entren SIN tocar código.
+export function ExternalDash({ palette }) {
+  const { data: ext } = useApiData(api.crimesExternal, { ready: false, categories: [] }, []);
+  const cats = ext.categories || [];
+  const [catId, setCatId] = useState(null);
+  const cat = cats.find((c) => c.id === catId) || cats[0];
+
+  if (!ext.ready || !cat) {
+    return (
+      <>
+        <header className="pls-sv-head">
+          <div>
+            <div className="pls-sv-eyebrow">Fuentes externas · SIJIN · Medicina Legal</div>
+            <h1 className="pls-sv-title">Más allá del hurto</h1>
+            <p className="pls-sv-lead">
+              Homicidios, violencia intrafamiliar y otras categorías, con la cifra oficial de cada entidad.
+            </p>
+          </div>
+          <span className="pls-sv-pill">
+            <span className="pls-sv-pill-dot" style={{ background: "var(--pls-fg-faint)", animation: "none", boxShadow: "none" }}></span>
+            En espera de bases
+          </span>
+        </header>
+        <div className="pls-sv-grid">
+          <Card title="Integración lista — faltan los datos" span>
+            <p className="pls-sv-note" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+              Pilas ya sabe leer bases de <b>SIJIN</b> y <b>Medicina Legal</b>: basta con dejar un CSV
+              agregado por <code>fuente, categoria, comuna, anio, conteo</code> en{" "}
+              <code>backend/ml/datasets/external/</code> y esta pestaña se llena sola con el total,
+              la serie anual y el ranking de comunas de cada categoría (ver el README de esa carpeta).
+              Por privacidad solo se aceptan conteos agregados, nunca registros de personas.
+            </p>
+          </Card>
+        </div>
+      </>
+    );
+  }
+
+  const comunaItems = (cat.byComuna || []).slice(0, 10).map((c, i) => ({
+    chip: "C" + c.comuna,
+    label: comunaName(c.comuna),
+    value: c.count,
+    color: heatColor(c.count, cat.byComuna[0]?.count || 1, palette),
+  }));
+  const yearVals = (cat.byYear || []).map((y) => y.count);
+  const yearLabels = (cat.byYear || []).map((y) => String(y.year));
+
+  return (
+    <>
+      <header className="pls-sv-head">
+        <div>
+          <div className="pls-sv-eyebrow">Fuentes externas · {cat.source}</div>
+          <h1 className="pls-sv-title">{cat.label}</h1>
+          <p className="pls-sv-lead">
+            {nfmt(cat.total)} casos · {cat.years[0]}–{cat.years[cat.years.length - 1]} · cifras oficiales de {cat.source}
+          </p>
+        </div>
+        <span className="pls-sv-pill">
+          <span className="pls-sv-pill-dot"></span>
+          En vivo · {cat.source}
+        </span>
+      </header>
+
+      {cats.length > 1 && (
+        <div className="pls-sv-tabs" role="tablist" style={{ marginBottom: 14 }}>
+          {cats.map((c) => (
+            <button key={c.id} role="tab" className={c.id === cat.id ? "is-on" : ""} onClick={() => setCatId(c.id)}>
+              {c.source} · {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="pls-sv-kpis">
+        <Kpi value={nfmt(cat.total)} label={`${cat.label} registrados`} accent />
+        <Kpi value={"C" + (cat.byComuna[0]?.comuna ?? "—")} label="Comuna más afectada" />
+        <Kpi value={cat.years.length} label="Años con datos" />
+        <Kpi value={cat.source} label="Fuente oficial" />
+      </div>
+
+      <div className="pls-sv-grid">
+        <Card title="Comunas que requieren mayor atención" sub={`Top 10 · total ${cat.years[0]}–${cat.years[cat.years.length - 1]}`}>
+          <BarList items={comunaItems} />
+        </Card>
+        <Card title="Serie anual" sub={`${cat.label} por año`}>
+          <Columns values={yearVals} labels={yearLabels} unit="casos" color="var(--pls-warn)" />
+        </Card>
+      </div>
+
+      <footer className="pls-sv-foot">
+        Fuente: {cat.source} (archivo <code>{cat.file}</code>). Conteos agregados por comuna y año;
+        Pilas no procesa datos de personas.
+      </footer>
+    </>
+  );
+}
+
+// ── Main view (pestañas: histórico vs previsto vs fuentes externas) ────────
 export default function StatsView({ palette }) {
   const [tab, setTab] = useState(() => {
     const h = (typeof window !== "undefined" ? window.location.hash : "").toLowerCase();
+    if (h.includes("fuentes") || h.includes("sources")) return "ext";
     return h.includes("previsto") || h.includes("forecast") || h.includes("pred") ? "pred" : "hist";
   });
   return (
@@ -447,8 +548,13 @@ export default function StatsView({ palette }) {
         <button role="tab" className={tab === "pred" ? "is-on" : ""} onClick={() => setTab("pred")}>
           <span className="pls-sv-tab-i">◈</span> Previsto · IA
         </button>
+        <button role="tab" className={tab === "ext" ? "is-on" : ""} onClick={() => setTab("ext")}>
+          <span className="pls-sv-tab-i">⧉</span> Fuentes · SIJIN/ML
+        </button>
       </div>
-      {tab === "hist" ? <HistoricalDash palette={palette} /> : <ForecastDash palette={palette} />}
+      {tab === "hist" ? <HistoricalDash palette={palette} />
+        : tab === "pred" ? <ForecastDash palette={palette} />
+        : <ExternalDash palette={palette} />}
     </div>
   );
 }

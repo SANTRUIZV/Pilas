@@ -3,13 +3,22 @@
 // Cada hexágono H3 se asigna a la comuna del centroide más cercano (Voronoi) y
 // se colorea por el riesgo del modelo a la hora seleccionada (vía /risk/comunas,
 // con fallback analítico). Dibuja las 22 comunas de Cali sobre el mapa real.
+//
+// Capas adicionales (todas con datos abiertos oficiales): sitios turísticos e
+// históricos (IDESC · Sec. de Turismo), ríos (OSM), estaciones del MIO
+// (Metro Cali) y bahías de taxi (DAPM). El modo «Barrios» dibuja los límites
+// reales de los 339 barrios (IDESC), cargados de forma diferida.
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { polygonToCells, cellToBoundary, latLngToCell, gridDisk } from "h3-js";
-import { ZONES, CAI as CAI_STATIC, HOSPITALS as HOSPITALS_STATIC } from "../data/data.js";
+import { ZONES, BARRIOS, CAI as CAI_STATIC, HOSPITALS as HOSPITALS_STATIC, normText, riskLabel } from "../data/data.js";
 import { COMUNAS, COMUNA_POLYS, CALI_CENTER } from "../data/comunas.js";
+import { SITIOS, SITIO_CATS } from "../data/sitios.js";
+import { RIOS } from "../data/rios.js";
+import { MIO_ESTACIONES, TAXI_BAHIAS } from "../data/mio.js";
+import { TERMINAL_CALI } from "../data/transporte.js";
 import { useComunaRisk, useApiData } from "../lib/hooks.js";
 import { api } from "../lib/api.js";
 
@@ -21,6 +30,20 @@ function riskColor(r, palette) {
   if (r < 45) return s[1];
   if (r < 65) return s[2];
   return s[3];
+}
+
+// Asignador de color según la escala elegida. En modo «relativa» los umbrales
+// son los cuartiles del riesgo de las 22 comunas A ESA HORA: ninguna comuna
+// queda clavada en el color máximo las 24 horas, lo que evita el efecto de
+// «mancha roja permanente» que estigmatiza a los sectores populares.
+function makeColorFor(byComuna, palette, relative) {
+  const s = palette || DEFAULT_PALETTE;
+  if (!relative) return (r) => riskColor(r, s);
+  const vals = Object.values(byComuna || {}).sort((a, b) => a - b);
+  if (!vals.length) return (r) => riskColor(r, s);
+  const q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
+  const t = [q(0.25), q(0.5), q(0.75)];
+  return (r) => (r <= t[0] ? s[0] : r <= t[1] ? s[1] : r <= t[2] ? s[2] : s[3]);
 }
 
 const TILES = {
@@ -52,15 +75,29 @@ const COMUNA_BY_ZONE = (() => {
   return m;
 })();
 
+// Histórico de hurtos por barrio (para el tooltip del modo «Barrios»).
+const HURTOS_BY_BARRIO = (() => {
+  const m = new Map();
+  for (const b of BARRIOS) m.set(normText(b.barrio), b.count);
+  return m;
+})();
+
 export default function MapH3({
   theme = "dark",
   vizType = "hex",
   hour = 19,
   palette,
+  relativeScale = false,
   selectedZoneId,
   onSelectZone,
+  onSelectBarrio,
   showCAI = true,
   showHospitals = false,
+  showSitios = false,
+  showRios = false,
+  showMio = false,
+  showTaxis = false,
+  tourist = false,
   routeFrom,
   routeTo,
   zoomPosition = "topleft",
@@ -72,15 +109,30 @@ export default function MapH3({
   const labelLayerRef = useRef(null);
   const caiLayerRef = useRef(null);
   const hospLayerRef = useRef(null);
+  const sitiosLayerRef = useRef(null);
+  const riosLayerRef = useRef(null);
+  const mioLayerRef = useRef(null);
+  const taxiLayerRef = useRef(null);
   const routeLayerRef = useRef(null);
   const cellsRef = useRef([]); // [{layer, comuna}]
+  const riskRef = useRef({});  // último byComuna (para tooltips perezosos)
 
   const { byComuna } = useComunaRisk(hour);
   const { data: cai } = useApiData(api.cai, CAI_STATIC, []); // CAI reales del API, fallback estático
   const { data: hospitals } = useApiData(api.hospitals, HOSPITALS_STATIC, []); // servicios de salud reales
-  const res = vizType === "barrio" ? 8 : 9;
-  const fillOpacity = vizType === "heat" ? 0.72 : vizType === "barrio" ? 0.5 : 0.58;
+  const barrioMode = vizType === "barrio";
+  // Límites reales de barrios (IDESC): módulo pesado, se carga solo al usarlo.
+  const [barriosGeo, setBarriosGeo] = useState(null);
+  useEffect(() => {
+    if (barrioMode && !barriosGeo) {
+      import("../data/barrios-geo.js").then(m => setBarriosGeo(m.BARRIOS_GEO)).catch(() => {});
+    }
+  }, [barrioMode, barriosGeo]);
+
+  const res = 9;
+  const fillOpacity = vizType === "heat" ? 0.72 : barrioMode ? 0.5 : 0.58;
   const selectedComuna = selectedZoneId ? COMUNA_BY_ZONE[selectedZoneId] : null;
+  riskRef.current = byComuna || {};
 
   // Celdas H3 teseladas por el límite REAL de cada comuna (COMUNA_POLYS, IDESC):
   // cada hexágono se asigna a la comuna cuyo polígono contiene su centro. La unión
@@ -138,8 +190,12 @@ export default function MapH3({
     L.control.zoom({ position: zoomPosition }).addTo(map);
     mapRef.current = map;
     hexLayerRef.current = L.layerGroup().addTo(map);
+    riosLayerRef.current = L.layerGroup().addTo(map);
+    taxiLayerRef.current = L.layerGroup().addTo(map);
     caiLayerRef.current = L.layerGroup().addTo(map);
     hospLayerRef.current = L.layerGroup().addTo(map);
+    mioLayerRef.current = L.layerGroup().addTo(map);
+    sitiosLayerRef.current = L.layerGroup().addTo(map);
     labelLayerRef.current = L.layerGroup().addTo(map);
     routeLayerRef.current = L.layerGroup().addTo(map);
     setTimeout(() => map.invalidateSize(), 60);
@@ -156,30 +212,63 @@ export default function MapH3({
     tileRef.current.bringToBack();
   }, [theme]);
 
-  // ── Geometría de hexágonos (según resolución) ───────────────────────────
+  // ── Geometría base: hexágonos (hex/calor) o polígonos de barrio ─────────
   useEffect(() => {
     const layer = hexLayerRef.current;
     if (!layer) return;
     layer.clearLayers();
     const built = [];
-    for (const { h, comuna } of cells) {
-      const boundary = cellToBoundary(h); // [[lat, lon], ...]
-      const poly = L.polygon(boundary, {
-        stroke: true, weight: 0.5, color: theme === "dark" ? "#0E1116" : "#F5F0E8",
-        fillOpacity, fillColor: "#888",
-      });
-      const zoneId = ZONE_BY_COMUNA[comuna];
-      const cdata = COMUNAS.find(c => c.n === comuna);
-      poly.bindTooltip(`Comuna ${comuna} · ${cdata ? cdata.name : ""}`, { sticky: true, direction: "top", opacity: 0.9 });
-      if (zoneId && onSelectZone) poly.on("click", () => onSelectZone(zoneId));
-      poly.addTo(layer);
-      built.push({ layer: poly, comuna });
+    const stroke = theme === "dark" ? "#0E1116" : "#F5F0E8";
+
+    if (barrioMode && barriosGeo) {
+      // Polígonos oficiales de los 339 barrios (IDESC), coloreados por el
+      // riesgo de su comuna. El tooltip añade el histórico de hurtos si existe.
+      for (const b of barriosGeo) {
+        const poly = L.polygon(b.rings, {
+          stroke: true, weight: 0.7, color: stroke,
+          fillOpacity, fillColor: "#888",
+        });
+        const cdata = COMUNAS.find(c => c.n === b.comuna);
+        poly.bindTooltip(() => {
+          const risk = riskRef.current[b.comuna];
+          const hurtos = HURTOS_BY_BARRIO.get(normText(b.name));
+          return `<b>${b.name}</b> · Comuna ${b.comuna}`
+            + (cdata ? `<br><span style="opacity:.75">${cdata.name}</span>` : "")
+            + (risk != null ? `<br>${tourist ? "Attention level" : "Nivel de atención"}: <b>${riskLabel(risk)}</b>` : "")
+            + (hurtos != null ? `<br><span style="opacity:.75">${hurtos.toLocaleString("es-CO")} hurtos históricos (2010–2026)</span>` : "");
+        }, { sticky: true, direction: "top", opacity: 0.92 });
+        poly.on("click", () => {
+          // Si el barrio está en la base de hurtos abre su panel; si no, la comuna.
+          if (onSelectBarrio && HURTOS_BY_BARRIO.has(normText(b.name))) onSelectBarrio(b.name);
+          else if (onSelectZone && ZONE_BY_COMUNA[b.comuna]) onSelectZone(ZONE_BY_COMUNA[b.comuna]);
+        });
+        poly.addTo(layer);
+        built.push({ layer: poly, comuna: b.comuna });
+      }
+    } else {
+      for (const { h, comuna } of cells) {
+        const boundary = cellToBoundary(h); // [[lat, lon], ...]
+        const poly = L.polygon(boundary, {
+          stroke: true, weight: 0.5, color: stroke,
+          fillOpacity, fillColor: "#888",
+        });
+        const zoneId = ZONE_BY_COMUNA[comuna];
+        const cdata = COMUNAS.find(c => c.n === comuna);
+        poly.bindTooltip(() => {
+          const risk = riskRef.current[comuna];
+          return `Comuna ${comuna} · ${cdata ? cdata.name : ""}`
+            + (risk != null ? `<br>${tourist ? "Attention level" : "Nivel de atención"}: <b>${riskLabel(risk)}</b>` : "");
+        }, { sticky: true, direction: "top", opacity: 0.9 });
+        if (zoneId && onSelectZone) poly.on("click", () => onSelectZone(zoneId));
+        poly.addTo(layer);
+        built.push({ layer: poly, comuna });
+      }
     }
     cellsRef.current = built;
     // recolorear inmediatamente tras reconstruir
     paint();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cells, theme]);
+  }, [cells, theme, barrioMode, barriosGeo, tourist]);
 
   // ── Etiquetas de comuna ─────────────────────────────────────────────────
   useEffect(() => {
@@ -240,6 +329,93 @@ export default function MapH3({
     }
   }, [showHospitals, theme, hospitals]);
 
+  // ── Sitios turísticos e históricos (IDESC · Sec. de Turismo + curados) ──
+  useEffect(() => {
+    const layer = sitiosLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!showSitios) return;
+    const bg = theme === "dark" ? "rgba(14,17,22,.88)" : "rgba(255,255,255,.92)";
+    for (const s of SITIOS) {
+      const cat = SITIO_CATS[s.cat] || {};
+      const icon = L.divIcon({
+        className: "",
+        html: `<span style="display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:${bg};border:1.5px solid #FFB454;font-size:12px;line-height:1;box-sizing:border-box;">${cat.emoji || "📍"}</span>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+      const tip = `<b>${s.name}</b> · ${tourist ? (cat.en || "") : (cat.es || "")}`
+        + (s.desc ? `<br><span style="opacity:.8">${s.desc}</span>` : "")
+        + (s.tip ? `<br>🔋 <i>${s.tip}</i>` : "");
+      L.marker([s.lat, s.lon], { icon, keyboard: false })
+        .bindTooltip(tip, { direction: "top", opacity: 0.95 })
+        .addTo(layer);
+    }
+  }, [showSitios, theme, tourist]);
+
+  // ── Ríos (OpenStreetMap) ────────────────────────────────────────────────
+  useEffect(() => {
+    const layer = riosLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!showRios) return;
+    for (const r of RIOS) {
+      const isCauca = r.id === "rio-cauca";
+      for (const line of r.lines) {
+        L.polyline(line, {
+          color: "#5FB7E6", weight: isCauca ? 3.2 : 2, opacity: 0.8,
+          interactive: true,
+        }).bindTooltip(`〰 <b>${r.name}</b>`, { sticky: true, direction: "top" }).addTo(layer);
+      }
+    }
+  }, [showRios]);
+
+  // ── MIO (estaciones y terminales) + Terminal de Transportes ─────────────
+  useEffect(() => {
+    const layer = mioLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!showMio) return;
+    const bg = theme === "dark" ? "#0E1116" : "#fff";
+    for (const e of MIO_ESTACIONES) {
+      const isTerm = e.kind === "Terminal";
+      const tip = `<b>${e.name}</b> · MIO ${e.kind}`
+        + (e.corredor ? `<br><span style="opacity:.75">Corredor ${e.corredor}</span>` : "")
+        + (e.address ? `<br><span style="opacity:.75">${e.address}</span>` : "");
+      L.circleMarker([e.lat, e.lon], {
+        radius: isTerm ? 6 : 3.5, color: "#2E86DE", weight: 2,
+        fillColor: isTerm ? "#2E86DE" : bg, fillOpacity: 1,
+      }).bindTooltip(tip, { direction: "top" }).addTo(layer);
+    }
+    // Terminal de Transportes (buses intermunicipales)
+    const icon = L.divIcon({
+      className: "",
+      html: `<span style="display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:${bg};border:2px solid #FF9B45;font-size:13px;line-height:1;box-sizing:border-box;">🚌</span>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+    L.marker([TERMINAL_CALI.lat, TERMINAL_CALI.lon], { icon, keyboard: false })
+      .bindTooltip(`<b>${TERMINAL_CALI.name}</b><br><span style="opacity:.75">${TERMINAL_CALI.address}</span>`, { direction: "top" })
+      .addTo(layer);
+  }, [showMio, theme]);
+
+  // ── Bahías oficiales de taxi (DAPM) ─────────────────────────────────────
+  useEffect(() => {
+    const layer = taxiLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!showTaxis) return;
+    const label = tourist ? "Official taxi bay" : "Bahía oficial de taxi";
+    for (const b of TAXI_BAHIAS) {
+      L.circleMarker([b.lat, b.lon], {
+        radius: 2.6, color: "#FFD166", weight: 1.4, fillColor: "#FFD166", fillOpacity: 0.5,
+      }).bindTooltip(
+        `🚕 ${label}${b.cupos ? ` · ${b.cupos} ${tourist ? "spots" : "cupos"}` : ""}${b.mio ? " · MIO" : ""}`,
+        { direction: "top" },
+      ).addTo(layer);
+    }
+  }, [showTaxis, tourist]);
+
   // ── Ruta ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const layer = routeLayerRef.current;
@@ -257,21 +433,22 @@ export default function MapH3({
   // ── Recoloreado por riesgo / selección ──────────────────────────────────
   function paint() {
     const stroke = theme === "dark" ? "#0E1116" : "#F5F0E8";
+    const colorFor = makeColorFor(byComuna, palette, relativeScale);
     for (const { layer, comuna } of cellsRef.current) {
       const risk = byComuna?.[comuna] ?? 0;
       const sel = selectedComuna != null && comuna === selectedComuna;
       layer.setStyle({
-        fillColor: riskColor(risk, palette),
+        fillColor: colorFor(risk),
         fillOpacity: sel ? Math.min(0.95, fillOpacity + 0.25) : fillOpacity,
         color: sel ? "#F5F0E8" : stroke,
-        weight: sel ? 1.6 : 0.5,
+        weight: sel ? 1.6 : barrioMode ? 0.7 : 0.5,
       });
     }
   }
   useEffect(() => {
     paint();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [byComuna, palette, selectedComuna, fillOpacity, theme]);
+  }, [byComuna, palette, relativeScale, selectedComuna, fillOpacity, theme]);
 
   return <div ref={containerRef} className="pls-map" style={{ width: "100%", height: "100%" }} />;
 }
