@@ -75,12 +75,13 @@ const COMUNA_BY_ZONE = (() => {
   return m;
 })();
 
-// Histórico de hurtos por barrio (para el tooltip del modo «Barrios»).
-const HURTOS_BY_BARRIO = (() => {
+// Fallback local del histórico por barrio (los top de data.js); en vivo se usa
+// el catálogo COMPLETO del backend (/barrios, ~387 barrios de la base).
+function buildHurtosIndex(list) {
   const m = new Map();
-  for (const b of BARRIOS) m.set(normText(b.barrio), b.count);
+  for (const b of list) m.set(normText(b.barrio), b.count);
   return m;
-})();
+}
 
 export default function MapH3({
   theme = "dark",
@@ -116,10 +117,14 @@ export default function MapH3({
   const routeLayerRef = useRef(null);
   const cellsRef = useRef([]); // [{layer, comuna}]
   const riskRef = useRef({});  // último byComuna (para tooltips perezosos)
+  const hurtosRef = useRef(buildHurtosIndex(BARRIOS)); // norm(barrio) → reportes
 
   const { byComuna } = useComunaRisk(hour);
   const { data: cai } = useApiData(api.cai, CAI_STATIC, []); // CAI reales del API, fallback estático
   const { data: hospitals } = useApiData(api.hospitals, HOSPITALS_STATIC, []); // servicios de salud reales
+  // Catálogo completo de barrios con su total de reportes (fallback: top de data.js).
+  const { data: barriosCat } = useApiData(api.barrios, { barrios: BARRIOS }, []);
+  hurtosRef.current = buildHurtosIndex(barriosCat?.barrios || BARRIOS);
   const barrioMode = vizType === "barrio";
   // Límites reales de barrios (IDESC): módulo pesado, se carga solo al usarlo.
   const [barriosGeo, setBarriosGeo] = useState(null);
@@ -222,7 +227,8 @@ export default function MapH3({
 
     if (barrioMode && barriosGeo) {
       // Polígonos oficiales de los 339 barrios (IDESC), coloreados por el
-      // riesgo de su comuna. El tooltip añade el histórico de hurtos si existe.
+      // riesgo de su comuna. Cada barrio es clicable y su tooltip muestra el
+      // nombre y el nº de reportes de la base (catálogo /barrios completo).
       for (const b of barriosGeo) {
         const poly = L.polygon(b.rings, {
           stroke: true, weight: 0.7, color: stroke,
@@ -231,17 +237,16 @@ export default function MapH3({
         const cdata = COMUNAS.find(c => c.n === b.comuna);
         poly.bindTooltip(() => {
           const risk = riskRef.current[b.comuna];
-          const hurtos = HURTOS_BY_BARRIO.get(normText(b.name));
+          const hurtos = hurtosRef.current.get(normText(b.name));
           return `<b>${b.name}</b> · Comuna ${b.comuna}`
             + (cdata ? `<br><span style="opacity:.75">${cdata.name}</span>` : "")
             + (risk != null ? `<br>${tourist ? "Attention level" : "Nivel de atención"}: <b>${riskLabel(risk)}</b>` : "")
-            + (hurtos != null ? `<br><span style="opacity:.75">${hurtos.toLocaleString("es-CO")} hurtos históricos (2010–2026)</span>` : "");
+            + (hurtos != null
+              ? `<br><span style="opacity:.75">${hurtos.toLocaleString("es-CO")} ${tourist ? "reports in the database" : "reportes en la base"} (2010–2026)</span>`
+              : `<br><span style="opacity:.75">${tourist ? "No reports under this name in the database" : "Sin reportes con este nombre en la base"}</span>`);
         }, { sticky: true, direction: "top", opacity: 0.92 });
-        poly.on("click", () => {
-          // Si el barrio está en la base de hurtos abre su panel; si no, la comuna.
-          if (onSelectBarrio && HURTOS_BY_BARRIO.has(normText(b.name))) onSelectBarrio(b.name);
-          else if (onSelectZone && ZONE_BY_COMUNA[b.comuna]) onSelectZone(ZONE_BY_COMUNA[b.comuna]);
-        });
+        if (onSelectBarrio) poly.on("click", () => onSelectBarrio(b.name));
+        else if (onSelectZone && ZONE_BY_COMUNA[b.comuna]) poly.on("click", () => onSelectZone(ZONE_BY_COMUNA[b.comuna]));
         poly.addTo(layer);
         built.push({ layer: poly, comuna: b.comuna });
       }

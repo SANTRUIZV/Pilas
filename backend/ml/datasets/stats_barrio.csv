@@ -2,6 +2,7 @@ barrio,comuna,count
 San Pedro,3,7295
 San Nicolás,3,4747
 San Vicente,2,2972
+Prados del Norte,2,2657
 Lili,17,2621
 El Calvario,3,2580
 San Fernando Nuevo,19,2565
@@ -19,8 +20,8 @@ Calima,4,1801
 Parcelaciones Pance,22,1787
 San Juan Bosco,3,1782
 Santa Mónica,2,1717
-Prados del Norte,2,1633
 Chipichape,2,1615
+Urbanización San Joaquin,17,1609
 Alfonso Bonilla Aragón,14,1552
 San Antonio,3,1548
 El Sena,5,1542
@@ -33,20 +34,23 @@ Manuela Beltrán,14,1376
 Vipasa,2,1372
 Nueva Floresta,12,1351
 Ciudad Capri,17,1351
+Los Cámbulos,19,1346
 Alameda,9,1323
 Centenario,2,1317
 Guayaquil,9,1313
 Valle Grande,21,1299
 La Merced,3,1272
+Siete de Agosto,7,1236
+Siloé,20,1235
 El Morichal,15,1234
 Urbanización Ciudad Jardín,22,1231
 Antonio Nariño,16,1221
 El Limonar,17,1219
 Ciudadela Floralia,6,1204
 El Cedro,19,1169
-Urbanización San Joaquin,17,1153
 Pampa Linda,19,1150
 Mariano Ramos,16,1144
+Cristóbal Colón,10,1091
 Nueva Tequendama,19,1085
 Calimio Desepaz,21,1080
 Villa Colombia,8,1076
@@ -55,7 +59,330 @@ San Pascual,3,1066
 Santa Elena,10,1058
 El Refugio,19,1055
 El Troncal,8,1054
+Villa del Prado - El Guabito,5,1048
 Bretaña,9,1042
-Prados Del Norte,2,1024
 La Hacienda,17,997
+Torres de Comfandi,5,995
 Unicentro Cali,17,983
+Santa Anita - La Selva,17,976
+Chapinero,8,966
+Meléndez,18,952
+El Gran Limonar,17,951
+El Vallado,15,922
+Salomia,4,900
+Jorge Eliécer Gaitán,6,891
+Urbanización La Flora,2,885
+Champagnat,19,883
+Alirio Mora Beltrán,14,870
+Belalcázar,9,856
+Ciudad 2000,16,848
+Alfonso Lopez P. 1a Etapa,7,840
+Colseguros Andes,10,839
+El Gran Limonar - Cataya,17,837
+Unidad Residencial Santiago de Cali,19,829
+El Jardín,11,802
+Cañaverales - Los Samanes,17,801
+3 de Julio,19,798
+Eucaristico,19,796
+Corregimiento,,791
+Camino Real - Joaquin Borrero Sinisterra,19,788
+Los Lagos,13,787
+San Luís,6,786
+Los Alcázares,6,779
+Primero de Mayo,17,773
+El Peñón,3,758
+Puerta del Sol,14,744
+Urbanización Militar,19,736
+Santander,4,735
+El Retiro,15,734
+Industrial,8,734
+Panamericano,10,732
+Desepaz Invicali,21,727
+La Base,8,725
+Potrero Grande,21,723
+Urbanización Colseguros,19,723
+Promociones Populares B,14,715
+Atanasio Girardot,8,714
+Santa Isabel,19,713
+República de Israel,16,706
+La Floresta,8,686
+Los Libertadores,3,684
+El Diamante,13,682
+Departamental,10,681
+El Hoyo,3,680
+Brisas de Los Álamos,2,673
+Alfonso López P. 1A. Etapa,7,666
+Porvenir,4,651
+Unión de Vivienda Popular,16,646
+Mayapan - Las Vegas,17,636
+Alfonso Lopez P. 3a Etapa,7,628
+San Cayetano,3,624
+Popular,4,621
+El Poblado II,13,621
+Metropolitano del Norte,5,613
+Los Comuneros I,15,613
+Paso del Comercio,6,607
+Flora Industrial,4,603
+Calipso,13,601
+Olímpico,10,599
+Las Delicias,4,599
+El Vergel,13,598
+Los Andes,5,590
+Los Guayacanes,5,587
+Urbanización La Nueva Base,8,585
+La Independencia,11,577
+Las Orquídeas,14,577
+José Manuel Marroquín I,14,574
+El Poblado I,13,572
+Urbanización Nueva Granada,19,567
+Miraflores,19,554
+Camino Real - Los Fundadores,19,551
+Villa del Sur,11,545
+Compartir,21,536
+Ciudad Universitaria,17,532
+Cañaveralejo - Seguros Patria,19,529
+Los Guaduales,6,527
+Ciudadela del Rio - CVC,21,526
+Ciudadela Comfandi,17,524
+Prados del Limonar,17,520
+San Luis II,6,512
+Cuarto de Legua - Guadalupe,19,496
+Ulpiano Lloreda,13,487
+Ciudad Talanga,21,486
+Barrio Eucarístico,19,485
+Los Portales - Nuevo Rey,17,485
+Santa Fé,8,482
+Urbanización Rio Lili,22,478
+El Trébol,8,470
+Aguablanca,11,462
+José Manuel Marroquín Segunda Etapa,14,455
+El Rodeo,12,451
+Las Ceibas,7,447
+Planta de Tratamiento,21,447
+Buenos Aires,18,445
+Ciudad de Los Álamos,2,441
+Ciudad Campestre,22,439
+Alférez Real,18,437
+Bosques del Limonar,17,429
+Santa Teresita,2,427
+Aranjuez,9,426
+La Selva,10,425
+Las Quintas de Don Simón,17,422
+Benjamín Herrera,8,418
+Los Naranjos II,14,410
+San Carlos,11,410
+José Manuel Marroquín II,14,409
+Charco Azul,13,404
+U. D. A. Galindo Plaza de Toros,19,398
+Belisario Caicedo,20,397
+Aguacatal,1,394
+Juanambú,2,394
+Las Acacias,10,391
+Los Andes B - La Riviera,5,391
+Villa del Lago,13,389
+Primitivo Crespo,8,388
+Urbanización El Ángel Del Hogar,7,387
+Doce de Octubre,12,385
+Sector Puente del Comercio,6,375
+Bellavista,19,375
+Petecuy Primera Etapa,6,374
+Manzanares,4,372
+José Manuel Marroquín Primera Etapa,14,368
+El Pondaje,13,366
+Saavedra Galindo,8,364
+Santa Mónica Popular,8,355
+Los Comuneros II,13,355
+Laureano Gómez,15,349
+Caldas,18,345
+Prados de Oriente,11,338
+Los Sauces,11,332
+La Alianza,4,332
+El Piloto,3,328
+Omar Torrijos,13,327
+Sector Alto Jordán,18,325
+El Bosque,2,321
+Los Chorros,18,321
+Barrio Departamental,10,320
+Sector Meléndez,18,315
+Urbanización La Merced,2,312
+Alfonso Lopez P. 2a Etapa,7,312
+Normandia,2,311
+San Cristóbal,10,309
+Los Parques Barranquilla,5,308
+La Rivera I,6,304
+Santa Rita,2,303
+La Fortaleza,11,300
+El Dorado,10,299
+20 de Julio,11,291
+La Esmeralda,4,291
+Las Américas,8,290
+Alfonso López P. 3A. Etapa,7,290
+Villa del Sol,5,288
+Nápoles,18,287
+Las Granjas,10,287
+La Isla,4,285
+La Campiña,2,283
+Tejares - Cristales,19,282
+Comuneros I,15,280
+Ciudad Los Álamos,2,279
+El Prado,11,278
+Puerto Mallarino,7,278
+Primavera,11,278
+Bolivariano,4,277
+Ciudadela Pasoancho,17,276
+Alto Nápoles,18,274
+Menga,2,266
+Vista Hermosa,1,264
+Manuel María Buenaventura,9,261
+Municipal,8,260
+San Judas Tadeo I,10,257
+Santo Domingo,10,249
+Senderos de La Flora,2,249
+Pasoancho,10,248
+Lleras Camargo,20,246
+Paseo De Los Almendros,5,244
+Julio Rincón,12,244
+El Jordán,18,244
+Pizamos I,21,242
+Cuarteles de Nápoles,18,240
+El Cortijo,20,235
+Bochalema,22,235
+Evaristo Garcia,4,234
+Marroquín III,13,233
+Sector Alto de los Chorros,18,231
+Sindical,12,230
+Los Parques - Barranquilla,5,227
+El Remanso,21,227
+San Judas Tadeo I Etapa,10,226
+Pizamos II,21,226
+Barrio Caldas,18,224
+Jorge Isaacs,4,223
+Fepicol,7,221
+Belén,20,216
+Lourdes,18,215
+Sultana - Berlín - San Francisco,4,208
+Los Comuneros Segunda Etapa,13,207
+Brisas de Mayo,20,207
+Alfonso López P. 2A. Etapa,7,200
+Prados del Sur,18,195
+Los Conquistadores,11,193
+La Cascada,19,191
+Jorge Zawadsky,10,191
+Los Naranjos,14,189
+Venezuela - Urbanización Cañaveralejo,20,183
+U.D. Alberto Galindo - Plaza De Toros,19,180
+Urbanización Boyaca,11,179
+Simón Bolívar,8,176
+Asturias,12,175
+San Marino,7,174
+Urbanización Calimio,6,174
+Alfonso Barberena A.,12,172
+Olaya Herrera,4,170
+Chiminangos II,5,170
+Maracaibo,11,169
+Ricardo Balcázar,13,167
+Chiminangos Primera Etapa,5,166
+Unidad Residencial El Coliseo,19,166
+San Pedro Claver,11,163
+El Recuerdo,11,163
+Villanueva,12,162
+Los Robles,13,162
+Francisco Eladio Ramírez,18,156
+Unidad Residencial Bueno Madrid,4,155
+Sector Laguna del Pondaje,13,151
+Los Naranjos I,14,148
+Guillermo Valencia,4,148
+Parque de la Caña,7,147
+Arboledas,2,146
+Yira Castro,13,144
+Petecuy Segunda Etapa,6,143
+Lleras Restrepo,13,143
+Chiminangos I,5,143
+El Paraíso,12,140
+Industria de Licores,4,140
+Santa Mónica Belalcázar,9,139
+Sector Patio Bonito,1,138
+León XIII,11,135
+Rodrigo Lara Bonilla,13,135
+Base Aérea,7,133
+Brisas del Limonar,16,129
+Club Campestre,22,127
+La Gran Colombia,11,125
+La Esperanza,11,125
+Rafael Uribe Uribe,8,124
+Ignacio Rengifo,4,124
+Polvorines,18,122
+Sector Cañaveralejo Guadalupe,19,122
+Petecuy Tercera Etapa,6,120
+La Libertad,10,119
+La Paz,2,114
+San Benito,11,110
+José Holguín Garcés,11,110
+Las Vegas,17,110
+Pizamos III - Las Dalias,21,109
+Fátima,4,108
+Altos de Menga,2,107
+Jorge Isaac,4,105
+Los Pinos,7,103
+Sector Cañaveralejo Guadalupe Antigua,19,102
+La Rivera Primera Etapa,6,97
+Fonaviemcali,6,96
+PP6-PP8-PP10,22,95
+San Judas Tadeo II,10,95
+El Mortiñal,19,94
+Eduardo Santos,12,93
+Villamercedes I - Villa Luz - Las Garzas,21,93
+La Playa,17,92
+La Sultana,20,90
+Andalucía,22,88
+Área En Desarrollo - Parque Del Amor,2,86
+Horizontes,18,86
+Mario Correa Rengifo,18,84
+Fenalco Kennedy,12,84
+Los Lideres,21,83
+Los Farallones,18,82
+Villablanca,13,79
+Ciudad Meléndez 1,17,79
+Puerto Nuevo,7,72
+Chiminangos Segunda Etapa,5,71
+Las Vegas del Lili,17,70
+La Alborada,16,68
+Lleras Restrepo II,13,68
+El Nacional,3,66
+Tierra Blanca,20,61
+José María Córdoba,11,61
+Sector Asprosocial - Diamante,13,60
+Navarro - La Chanca,3,59
+El Verdal - Gonchelandia,22,58
+PP1,22,57
+Cañaveral,19,55
+Piedrachiquita,22,50
+Pueblo Joven,20,47
+Alto Normandia,2,42
+Colinas del Sur,18,40
+San Judas Tadeo II Etapa,10,38
+Santa Bárbara,19,35
+Sector Altos De Normandía - Bataclan,2,34
+PP4-PP5,22,34
+Villa blanca,13,33
+Marco Fidel Suarez,4,32
+Acueducto San Antonio,3,31
+El Guayabal 2,22,30
+Bello Horizonte,12,29
+Ciudad Meléndez 2,17,27
+Villa mercedes I - Villa Luz - Las Garzas,21,26
+Sector Altos de Santa Isabel,19,25
+Cachipay,22,25
+Cuarteles Nápoles,18,21
+Lituania - Dalandia,22,16
+Altos De Santa Isabel - La Morelia,19,14
+Zonamérica,22,14
+Cementerio - Carabineros,20,13
+Sector Bosque Municipal,19,8
+El Guayabal 1,22,7
+Vendimia,16,5
+El Marañón,22,4
+El Capricho 2,17,4
+Marañón Bajo,22,2
+Villacolombia,8,1
+Rafael Uribe,8,1

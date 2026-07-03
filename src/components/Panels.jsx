@@ -414,8 +414,11 @@ export function BarrioPanel({ name, onClose }) {
           <button className="pls-x" onClick={onClose}>✕</button>
         </div>
         <div className="pls-empty">
-          <p>No encontramos «{name}» en la base de hurtos 2010–2026.</p>
-          <p className="pls-foot-mute">Prueba con otro barrio (p. ej. San Pedro, Granada, El Ingenio).</p>
+          <p>Sin reportes registrados para «{name}» en la base de hurtos 2010–2026.</p>
+          <p className="pls-foot-mute">
+            Buena señal para el barrio — aunque también puede deberse a que la base
+            lo registra con otro nombre (p. ej. etapas o urbanizaciones unificadas).
+          </p>
         </div>
       </aside>
     );

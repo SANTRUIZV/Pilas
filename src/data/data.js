@@ -294,8 +294,9 @@ export const STATS_FALLBACK = {
   highlights: { peakHour: 11, peakWeekday: 4, peakWeekdayLabel: "Vie", topComuna: 19, topModalidad: "Sin arma (atraco directo)" },
 };
 
-// Barrios con su comuna y total histórico de hurtos 2010–2026 (de stats_barrio.csv).
-// Sirve de respaldo del buscador cuando el backend (/barrios) no responde.
+// Barrios con su comuna y total histórico de hurtos 2010–2026 (subconjunto top
+// de stats_barrio.csv). Respaldo del buscador y del mapa cuando el backend
+// (/barrios, catálogo completo con ~387 barrios) no responde.
 export const BARRIOS = [
   { barrio: "San Pedro", comuna: 3, count: 7295 }, { barrio: "San Nicolás", comuna: 3, count: 4747 },
   { barrio: "San Vicente", comuna: 2, count: 2972 }, { barrio: "Lili", comuna: 17, count: 2621 },
