@@ -15,7 +15,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import config, data, gov_stats, stats
+from . import config, data, gov_stats, stats, violence
 from . import tourism as tourism_svc  # alias: evita chocar con el endpoint def tourism()
 from .model import risk_model
 from .schemas import (
@@ -234,6 +234,17 @@ def citizen_stats() -> dict:
     de hurtos 2010–2026. Si los CSV no están, devuelve {} (el front cae a demo)."""
     if stats.is_ready():
         return stats.citizen_stats_payload()
+    return {}
+
+
+@app.get("/stats/violencia", tags=["estadísticas"])
+def violencia_stats() -> dict:
+    """Estadísticas de violencia de género (Cali 2013–2022, Datos Abiertos) y
+    violencia intrafamiliar (MinDefensa, corte Cali): tendencia anual, comunas,
+    tipo de violencia, perfil de la víctima y relación con el agresor. Si los
+    CSV no están, devuelve {} (el front cae a demo)."""
+    if violence.is_ready():
+        return violence.payload()
     return {}
 
 

@@ -578,6 +578,210 @@ def ingest_cuadrantes():
     print(f"· Cuadrantes de Cali (hoja «ORIGINAL»): {len(out):,} registros")
 
 
+# ── Violencia intrafamiliar (MinDefensa, corte Cali) ─────────────────────────
+_CALI_COD_MUNI = 76001
+
+
+def ingest_violencia_intrafamiliar():
+    """Base nacional de violencia intrafamiliar de MinDefensa (hoja «DATOS»,
+    ~657k filas país): conteos diarios por municipio. Se filtra Cali
+    (COD_MUNI 76001) y se agrega CANTIDAD por año × mes.
+
+    Salida: `vif_monthly.csv` (year, month, count) — alimenta la serie
+    «Violencia intrafamiliar» de /gov/series, las alertas y el briefing."""
+    try:
+        path = _find("intrafamiliar")
+    except FileNotFoundError:
+        print("· VIF: xlsx de MinDefensa no encontrado; omitido")
+        return
+    wb = load_workbook(path, read_only=True, data_only=True)
+    ws = wb[_sheet(wb, "datos")]
+    rows = ws.iter_rows(values_only=True)
+    header = list(next(rows))
+    ix = {str(h).strip(): i for i, h in enumerate(header)}
+
+    monthly = defaultdict(int)   # (year, month) -> count
+    seen = kept = 0
+    for r in rows:
+        seen += 1
+        try:
+            if int(r[ix["COD_MUNI"]]) != _CALI_COD_MUNI:
+                continue
+        except (TypeError, ValueError):
+            continue
+        d = _to_date(r[ix["FECHA HECHO"]])
+        if d is None:
+            continue
+        qty = r[ix["CANTIDAD"]]
+        qty = int(qty) if isinstance(qty, (int, float)) else 1
+        monthly[(d.year, d.month)] += qty
+        kept += 1
+    wb.close()
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(DATA_DIR / "vif_monthly.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["year", "month", "count"])
+        for (y, m), c in sorted(monthly.items()):
+            w.writerow([y, m, c])
+    years = sorted({y for y, _ in monthly})
+    total = sum(monthly.values())
+    print(f"· Violencia intrafamiliar (MinDefensa · Cali): {seen:,} filas país, "
+          f"{kept:,} de Cali, {total:,} casos ({years[0]}–{years[-1]})" if years else
+          "· Violencia intrafamiliar: sin filas de Cali")
+
+
+# ── Violencia de género en Cali 2013–2022 (Datos Abiertos) ───────────────────
+# El xlsx trae 4 hojas con esquemas distintos (2013-2018, 2019, 2020, 2021-2022);
+# estas funciones normalizan cada dimensión a categorías canónicas comunes.
+
+def _gv_tipo(v) -> str | None:
+    """tipo_violenc → tipo canónico. Devuelve None para ruido (la hoja 2019 trae
+    algunas filas con valores de otra columna, p. ej. «Estudiante»)."""
+    s = _norm(v)
+    if not s or s in ("none", "sin dato", "ninguna"):
+        return None
+    if "fisic" in s:
+        return "Física"
+    if "psicolog" in s:
+        return "Psicológica"
+    if "negligencia" in s or "privacion" in s or "abandono" in s:
+        return "Negligencia y abandono"
+    if any(k in s for k in ("sexual", "violacion", "trata", "acoso", "turismo")):
+        return "Sexual"
+    return None
+
+
+def _gv_sexo(v) -> str:
+    s = _norm(v)
+    if "hombre" in s or "masculino" in s or s == "m":
+        return "Hombre"
+    if "mujer" in s or "femenino" in s or s == "f":
+        return "Mujer"
+    return "Sin dato"
+
+
+def _gv_comuna(v) -> int | None:
+    """comuna en formatos mixtos: 13 · «Comuna 21» · «comuna 15 » · «Sin dato».
+    Valores >22 (corregimientos) se descartan del ranking por comuna."""
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        c = int(v)
+    else:
+        s = _norm(v).replace("comuna", "").strip()
+        if not s.isdigit():
+            return None
+        c = int(s)
+    return c if 1 <= c <= 22 else None
+
+
+def _gv_agresor(v) -> str:
+    """relacion_fam_victima (hojas 2019 y 2020) → categoría canónica."""
+    s = _norm(v)
+    if "ex" in s and "pareja" in s:
+        return "Ex-pareja"
+    if "pareja" in s:
+        return "Pareja"
+    if s in ("familiar", "madre", "padre"):
+        return "Otro familiar"
+    if s == "ninguno":
+        return "No familiar"
+    return "Sin dato"
+
+
+def ingest_violencia_genero():
+    """Eventos de violencia de género en Cali 2013–2022 (Datos Abiertos, ~63k
+    eventos individuales). Agrega por año, comuna, tipo de violencia, sexo y
+    edad de la víctima, y relación con el agresor.
+
+    Salidas en `ml/datasets/` (todas `label,count` salvo la anual):
+      - gv_yearly.csv    year, count                (todas las hojas)
+      - gv_comuna.csv    comuna, count              (todas las hojas)
+      - gv_tipo.csv      tipo, count                (hojas 2013-2020; 2021-2022
+                                                     solo distingue sexual/no sexual)
+      - gv_sexo.csv      sexo, count                (todas las hojas)
+      - gv_edad.csv      band, count                (todas las hojas)
+      - gv_agresor.csv   agresor, count             (hojas 2019-2020)
+    """
+    try:
+        path = _find("violencia-de-genero")
+    except FileNotFoundError:
+        print("· Violencia de género: xlsx no encontrado; omitido")
+        return
+    wb = load_workbook(path, read_only=True, data_only=True)
+
+    yearly = Counter()
+    comuna = Counter()
+    tipo = Counter()
+    sexo = Counter()
+    edad = Counter()
+    agresor = Counter()
+
+    def process(sheet: str, year_col: str | None, fixed_year: int | None,
+                sexo_col: str, edad_col: str, comuna_col: str,
+                tipo_col: str | None, agresor_col: str | None):
+        ws = wb[sheet]
+        rows = ws.iter_rows(values_only=True)
+        ix = {str(h).strip(): i for i, h in enumerate(next(rows))}
+        n = 0
+        for r in rows:
+            if not any(c is not None for c in r):
+                continue
+            n += 1
+            y = fixed_year
+            if year_col is not None:
+                try:
+                    y = int(r[ix[year_col]])
+                except (TypeError, ValueError):
+                    y = None
+            if y is not None:
+                yearly[y] += 1
+            c = _gv_comuna(r[ix[comuna_col]])
+            if c is not None:
+                comuna[c] += 1
+            sexo[_gv_sexo(r[ix[sexo_col]])] += 1
+            band = _edad_band(r[ix[edad_col]])
+            if band:
+                edad[band] += 1
+            if tipo_col is not None:
+                t = _gv_tipo(r[ix[tipo_col]])
+                if t:
+                    tipo[t] += 1
+            if agresor_col is not None:
+                agresor[_gv_agresor(r[ix[agresor_col]])] += 1
+        return n
+
+    n1 = process("2013-2018", "ano", None, "sexo", "edad", "comuna",
+                 "tipo_violenc", None)
+    n2 = process("2019", None, 2019, "sexo_vict", "edad", "comuna",
+                 "tipo_violenc", "relacion_fam_victima")
+    n3 = process("2020", None, 2020, "sexo_vict", "edad", "comuna",
+                 "tipo_violenc", "relacion_fam_victima")
+    n4 = process("2021-2022", "ano_", None, "sexo_", "edad_", "com_",
+                 None, None)
+    wb.close()
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    def _write(name, col, items):
+        with open(DATA_DIR / name, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow([col, "count"])
+            w.writerows(items)
+
+    _write("gv_yearly.csv", "year", sorted(yearly.items()))
+    _write("gv_comuna.csv", "comuna", sorted(comuna.items(), key=lambda x: -x[1]))
+    _write("gv_tipo.csv", "tipo", tipo.most_common())
+    _write("gv_sexo.csv", "sexo", sexo.most_common())
+    _write("gv_edad.csv", "band", [(b, edad[b]) for b in _EDAD_BANDS if b in edad])
+    _write("gv_agresor.csv", "agresor", agresor.most_common())
+
+    total = n1 + n2 + n3 + n4
+    print(f"· Violencia de género (Cali 2013–2022): {total:,} eventos "
+          f"({n1:,} + {n2:,} + {n3:,} + {n4:,}) · comunas={len(comuna)} · tipos={len(tipo)}")
+
+
 def main():
     # La consola de Windows usa cp1252 por defecto y no puede imprimir «✓»/«·».
     try:
@@ -590,6 +794,8 @@ def main():
     ingest_cai()
     ingest_cuadrantes()
     ingest_salud()
+    ingest_violencia_intrafamiliar()
+    ingest_violencia_genero()
     print(f"✓ CSVs en {DATA_DIR}")
 
 

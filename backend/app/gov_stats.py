@@ -103,7 +103,10 @@ def _load_incidents() -> dict | None:
 
 @lru_cache(maxsize=1)
 def _load_monthly() -> dict | None:
-    """Carga `crime_monthly.csv` indexado por (conflictividad, year, month)."""
+    """Carga `crime_monthly.csv` indexado por (conflictividad, year, month).
+    Si existe `vif_monthly.csv` (base de MinDefensa, corte Cali), la mezcla como
+    la conflictividad «Violencia intrafamiliar» — así /gov/series y el selector
+    de delitos del dashboard la muestran junto al hurto."""
     path = DATA_DIR / "crime_monthly.csv"
     if not path.exists():
         return None
@@ -117,7 +120,31 @@ def _load_monthly() -> dict | None:
             by_kym[(k, y, m)] += n
             by_k[k] += n
             years.add(y)
+    vif_path = DATA_DIR / "vif_monthly.csv"
+    if vif_path.exists():
+        k = "Violencia intrafamiliar"
+        with open(vif_path, encoding="utf-8") as f:
+            for r in csv.DictReader(f):
+                try:
+                    y = int(r["year"]); m = int(r["month"]); n = int(r["count"])
+                except (KeyError, ValueError):
+                    continue
+                by_kym[(k, y, m)] += n
+                by_k[k] += n
     return {"by_kym": dict(by_kym), "by_k": dict(by_k), "years": sorted(years)}
+
+
+def _vif_by_year() -> dict[int, int]:
+    """Casos de violencia intrafamiliar por año (de la base de MinDefensa
+    mezclada en `_load_monthly`). {} si la base no está."""
+    monthly = _load_monthly()
+    if not monthly:
+        return {}
+    out: dict[int, int] = defaultdict(int)
+    for (k, y, _m), n in monthly["by_kym"].items():
+        if k == "Violencia intrafamiliar":
+            out[y] += n
+    return dict(out)
 
 
 def is_ready() -> bool:
@@ -443,7 +470,45 @@ def detect_alerts(year: int | None = None) -> list[dict]:
             "suggestion": suggestion,
             "comuna": c,
         })
+
+    vif_alert = _detect_vif_alert(last)
+    if vif_alert:
+        out.append(vif_alert)
     return out
+
+
+def _detect_vif_alert(year: int) -> dict | None:
+    """Alerta de ciudad por violencia intrafamiliar (base MinDefensa, corte
+    Cali): compara el año analizado contra el promedio de los 5 años previos.
+    Solo se emite si la desviación es notable (|z| ≥ 0.8) — no compite con las
+    alertas de hurto por comuna, las complementa con otra conflictividad."""
+    vif = _vif_by_year()
+    last_c = vif.get(year, 0)
+    prior = [vif[y] for y in sorted(vif) if year - 5 <= y < year and vif[y] > 0]
+    if last_c == 0 or len(prior) < 3:
+        return None
+    mu = sum(prior) / len(prior)
+    var = sum((x - mu) ** 2 for x in prior) / max(1, len(prior) - 1)
+    sd = math.sqrt(var)
+    z = (last_c - mu) / sd if sd > 0 else 0
+    if abs(z) < 0.8:
+        return None
+    delta_pct = ((last_c - mu) / mu * 100) if mu > 0 else 0
+    direction = "↑" if z >= 0 else "↓"
+    return {
+        "id": "a-vif-cali",
+        "severity": "high" if abs(z) >= 1.5 else "medium",
+        "zone": "Cali · toda la ciudad",
+        "kind": "Violencia intrafamiliar " + ("al alza" if z >= 0 else "a la baja"),
+        "detail": (f"Casos de violencia intrafamiliar en {year} {direction} {abs(delta_pct):.1f}% "
+                   f"vs promedio de los {len(prior)} años previos ({last_c:,} casos, "
+                   f"base MinDefensa). Z-score {z:+.2f}."),
+        "since": "cierre anual",
+        "confidence": round(min(0.99, 0.5 + math.tanh(abs(z) / 2) * 0.45), 2),
+        "suggestion": ("Articular con Comisarías de Familia y Línea Púrpura (155)"
+                       if z >= 0 else "Confirmar tendencia con Comisarías de Familia"),
+        "comuna": None,
+    }
 
 
 # ── Recomendación de patrullas ──────────────────────────────────────────────
@@ -603,6 +668,34 @@ def briefing_payload(roc_auc: float | None = None, year: int | None = None) -> d
             f"Según el riesgo previsto por el modelo para las próximas horas, se sugiere reforzar "
             f"{cais}. En conjunto, el modelo recomienda {extra:+d} unidades sobre la asignación base."
         )
+
+    # Violencia intrafamiliar y de género (bases MinDefensa + Datos Abiertos).
+    vif = _vif_by_year()
+    vif_y = vif.get(y, 0)
+    if vif_y:
+        prev_vif_years = [yy for yy in sorted(vif) if yy < y and vif[yy] > 0]
+        p_vif = f"En violencia intrafamiliar se registraron {vif_y:,} casos en {y}"
+        if prev_vif_years:
+            pv = vif[prev_vif_years[-1]]
+            d = ((vif_y - pv) / pv * 100) if pv else 0
+            word = "más" if d >= 0 else "menos"
+            p_vif += f", {abs(d):.1f}% {word} que en {prev_vif_years[-1]} (base MinDefensa)"
+        p_vif += "."
+        try:
+            from . import violence as _v
+            hl = _v.gv_highlights()
+        except Exception:
+            hl = {}
+        if hl.get("pctMujeres"):
+            p_vif += (f" En los eventos de violencia de género de Cali, el "
+                      f"{hl['pctMujeres']}% de las víctimas son mujeres")
+            if hl.get("topComuna"):
+                p_vif += f" y la comuna más afectada es la {hl['topComuna']}"
+            if hl.get("pctAgresorConocido"):
+                p_vif += (f"; en el {hl['pctAgresorConocido']}% de los casos con dato, "
+                          f"el agresor es pareja, ex-pareja o familiar")
+            p_vif += "."
+        paragraphs.append(p_vif)
 
     paragraphs.append(
         f"El modelo de riesgo opera con una precisión (ROC-AUC) del {acc:.1f}%, "

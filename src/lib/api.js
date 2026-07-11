@@ -45,6 +45,7 @@ export const api = {
   riskForecast: () => get("/risk/forecast"),
   crimes: () => get("/crimes"),
   stats: () => get("/stats"),
+  violence: () => get("/stats/violencia"),
   barrios: () => get("/barrios"),
   barrioDetail: (name) => get(`/barrios/${encodeURIComponent(name)}`),
   cai: () => get("/cai"),

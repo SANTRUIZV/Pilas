@@ -1,7 +1,7 @@
 // Pilas — Vista de Estadísticas (app ciudadana). Dashboard de hurtos derivado de
 // la base real de la Alcaldía 2010–2026 (endpoint /stats, con fallback demo).
 import React, { useMemo, useState } from "react";
-import { STATS_FALLBACK, HOURS, riskClass } from "../data/data.js";
+import { STATS_FALLBACK, VIOLENCE_FALLBACK, HOURS, riskClass } from "../data/data.js";
 import { COMUNAS } from "../data/comunas.js";
 import { api } from "../lib/api.js";
 import { useApiData } from "../lib/hooks.js";
@@ -294,6 +294,121 @@ export function HistoricalDash({ palette }) {
   );
 }
 
+// ── Violence dashboard (violencia de género e intrafamiliar) ──────────────
+export function ViolenceDash({ palette }) {
+  const { data: v, live } = useApiData(api.violence, VIOLENCE_FALLBACK, []);
+  // Si el backend responde {} (base no ingestada), usar el fallback.
+  const d = v && v.gv?.total ? v : VIOLENCE_FALLBACK;
+  const online = live && v && v.gv?.total;
+  const gv = d.gv, vif = d.vif, hl = d.highlights || {};
+
+  const comunaItems = useMemo(() => {
+    const max = gv.byComuna?.[0]?.count || 1;
+    return (gv.byComuna || []).slice(0, 8).map((c) => ({
+      chip: "C" + c.comuna,
+      label: comunaName(c.comuna),
+      value: c.count,
+      color: heatColor(c.count, max, palette),
+    }));
+  }, [gv, palette]);
+
+  const tipoItems = (gv.tipo || []).map((t, i) => ({
+    label: t.label, value: t.count, color: CAT[i % CAT.length],
+  }));
+  const tipoTotal = tipoItems.reduce((a, b) => a + b.value, 0);
+
+  const sexoItems = (gv.sexo || []).map((x) => ({
+    label: x.label, value: x.count, color: x.label === "Mujer" ? "#EC6A9C" : "#5FB7E6",
+  }));
+  const sexoTotal = sexoItems.reduce((a, b) => a + b.value, 0);
+
+  const agresorItems = (gv.agresor || [])
+    .filter((a) => a.label !== "Sin dato")
+    .map((a, i) => ({ label: a.label, value: a.count, color: CAT[(i + 4) % CAT.length] }));
+
+  const vifDelta = vif?.delta;
+
+  return (
+    <>
+      <header className="pls-sv-head">
+        <div>
+          <div className="pls-sv-eyebrow">Histórico · Violencia de género e intrafamiliar</div>
+          <h1 className="pls-sv-title">Violencia de género en Cali</h1>
+          <p className="pls-sv-lead">
+            {nfmt(gv.total)} eventos ({gv.yearRange}) · {nfmt(vif?.total)} casos de violencia
+            intrafamiliar ({vif?.yearRange})
+          </p>
+        </div>
+        <span className="pls-sv-pill" title={online ? "Datos en vivo del backend" : "Datos demo locales"}>
+          <span className="pls-sv-pill-dot" style={online ? null : { background: "var(--pls-fg-faint)", animation: "none", boxShadow: "none" }}></span>
+          {online ? "En vivo · base real" : "Demo · base real"}
+        </span>
+      </header>
+
+      <div className="pls-sv-kpis">
+        <Kpi value={nfmt(gv.total)} label="Eventos de violencia de género" accent />
+        <Kpi value={(hl.pctMujeres ?? "—") + "%"} label="De las víctimas son mujeres" />
+        <Kpi value={"C" + (hl.topComuna ?? "—")} label="Comuna más afectada" />
+        <Kpi
+          value={vif?.lastFullYearCount ? nfmt(vif.lastFullYearCount) : "—"}
+          label={`VIF en ${vif?.lastFullYear ?? "—"}${vifDelta != null ? ` (${vifDelta > 0 ? "▲" : "▼"} ${Math.abs(vifDelta).toFixed(1)}%)` : ""}`} />
+      </div>
+
+      <div className="pls-sv-grid">
+        <Card title="Comunas más afectadas" sub="Top 8 · violencia de género">
+          <BarList items={comunaItems} />
+        </Card>
+
+        <Card title="Tipo de violencia" sub={`Casos ${gv.tipoCoverage || ""} con tipo registrado`}>
+          <Donut items={tipoItems}
+            centerTop={tipoItems[0] ? pct(tipoItems[0].value, tipoTotal).toFixed(0) + "%" : "—"}
+            centerBottom={tipoItems[0] ? tipoItems[0].label.toLowerCase() : ""} />
+        </Card>
+
+        <Card title="Perfil de la víctima" sub={`Sexo y edad · ${nfmt(sexoTotal)} eventos`}>
+          <div className="pls-sv-victim">
+            <Donut items={sexoItems}
+              centerTop={sexoItems[0] ? pct(sexoItems[0].value, sexoTotal).toFixed(0) + "%" : "—"}
+              centerBottom="mujeres" />
+            <div className="pls-sv-victim-age">
+              <div className="pls-sv-mini-h">Edad</div>
+              <Columns values={(gv.edad || []).map((e) => e.count)} labels={(gv.edad || []).map((e) => e.label)} color="#A78BFA" />
+            </div>
+          </div>
+        </Card>
+
+        <Card title="¿Quién agrede?" sub={`Relación con la víctima · ${gv.agresorCoverage || ""}`}>
+          <BarList items={agresorItems} />
+          <p className="pls-sv-note">
+            La mayoría de los agresores son parte del entorno cercano: pareja, ex-pareja o un familiar.
+          </p>
+        </Card>
+
+        <Card title="Eventos de violencia de género por año" sub={gv.yearRange} span>
+          <YearTrend data={gv.byYear || []} />
+          <p className="pls-sv-note">
+            La caída de 2020–2021 coincide con los confinamientos y el subregistro por COVID-19.
+          </p>
+        </Card>
+
+        <Card title="Violencia intrafamiliar por año" sub={`${vif?.yearRange} · base MinDefensa (corte Cali)`} span>
+          <YearTrend data={vif?.byYear || []} />
+          <p className="pls-sv-note">
+            El último año del registro es parcial. Si tú o alguien cercano vive violencia
+            intrafamiliar: <b>Línea Púrpura 155</b> · emergencias <b>123</b> · Comisarías de Familia.
+          </p>
+        </Card>
+      </div>
+
+      <footer className="pls-sv-foot">
+        Fuentes: eventos de violencia de género en Santiago de Cali 2013–2022 (Datos Abiertos Colombia)
+        y violencia intrafamiliar de MinDefensa (corte Cali). El tipo de violencia y la relación con el
+        agresor no están disponibles en todos los años (los esquemas de la base cambian).
+      </footer>
+    </>
+  );
+}
+
 // ── Heatmap comuna × hora (riesgo previsto por el modelo) ──────────────────
 function riskFill(r, palette) {
   const stops = palette || ["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"];
@@ -436,6 +551,7 @@ export function ForecastDash({ palette }) {
 export default function StatsView({ palette }) {
   const [tab, setTab] = useState(() => {
     const h = (typeof window !== "undefined" ? window.location.hash : "").toLowerCase();
+    if (h.includes("violencia") || h.includes("genero")) return "violence";
     return h.includes("previsto") || h.includes("forecast") || h.includes("pred") ? "pred" : "hist";
   });
   return (
@@ -447,8 +563,13 @@ export default function StatsView({ palette }) {
         <button role="tab" className={tab === "pred" ? "is-on" : ""} onClick={() => setTab("pred")}>
           <span className="pls-sv-tab-i">◈</span> Previsto · IA
         </button>
+        <button role="tab" className={tab === "violence" ? "is-on" : ""} onClick={() => setTab("violence")}>
+          <span className="pls-sv-tab-i">⚑</span> Violencia · género
+        </button>
       </div>
-      {tab === "hist" ? <HistoricalDash palette={palette} /> : <ForecastDash palette={palette} />}
+      {tab === "hist" && <HistoricalDash palette={palette} />}
+      {tab === "pred" && <ForecastDash palette={palette} />}
+      {tab === "violence" && <ViolenceDash palette={palette} />}
     </div>
   );
 }

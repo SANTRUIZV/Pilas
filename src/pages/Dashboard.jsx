@@ -1,7 +1,7 @@
 // Pilas Gov Dashboard — Secretaría de Seguridad
 import React, { useState, useMemo, useRef } from "react";
 import MapH3 from "../components/MapH3.jsx";
-import { HistoricalDash, ForecastDash } from "../components/Stats.jsx";
+import { HistoricalDash, ForecastDash, ViolenceDash } from "../components/Stats.jsx";
 import { CRIMES, METRICS, ZONES } from "../data/data.js";
 import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "../data/data-gov.js";
 import { useApiStatus, useApiData } from "../lib/hooks.js";
@@ -647,11 +647,13 @@ function GovIntel({ year }) {
         <button className={tab === "brief" ? "is-on" : ""} onClick={() => setTab("brief")}>◆ Briefing</button>
         <button className={tab === "forecast" ? "is-on" : ""} onClick={() => setTab("forecast")}>◈ Pronóstico 24h</button>
         <button className={tab === "profile" ? "is-on" : ""} onClick={() => setTab("profile")}>▤ Perfil del delito</button>
+        <button className={tab === "violence" ? "is-on" : ""} onClick={() => setTab("violence")}>⚑ Violencia de género</button>
       </div>
       <div className="gov-intel-body">
         {tab === "brief" && <GovBriefing year={year} />}
         {tab === "forecast" && <div className="pls-sv gov-intel-sv"><ForecastDash palette={GOV_PALETTE} /></div>}
         {tab === "profile" && <div className="pls-sv gov-intel-sv"><HistoricalDash palette={GOV_PALETTE} /></div>}
+        {tab === "violence" && <div className="pls-sv gov-intel-sv"><ViolenceDash palette={GOV_PALETTE} /></div>}
       </div>
     </section>
   );

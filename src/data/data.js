@@ -293,6 +293,55 @@ export const STATS_FALLBACK = {
   highlights: { peakHour: 11, peakWeekday: 4, peakWeekdayLabel: "Vie", topComuna: 19, topModalidad: "Sin arma (atraco directo)" },
 };
 
+// Violencia de género (Cali 2013–2022, Datos Abiertos) e intrafamiliar
+// (MinDefensa, corte Cali 2006–2026) — respaldo demo con cifras reales
+// agregadas por la ingesta. En vivo llegan vía /stats/violencia.
+export const VIOLENCE_FALLBACK = {
+  ready: false,
+  gv: {
+    total: 62828,
+    years: Array.from({ length: 10 }, (_, i) => 2013 + i),
+    yearRange: "2013–2022",
+    byYear: [[2013, 2535], [2014, 4272], [2015, 4429], [2016, 5259], [2017, 6525], [2018, 7602], [2019, 9808], [2020, 7125], [2021, 5484], [2022, 9789]].map(([year, count]) => ({ year, count })),
+    byComuna: [
+      { comuna: 13, count: 4896 }, { comuna: 21, count: 4652 }, { comuna: 15, count: 4268 },
+      { comuna: 14, count: 3985 }, { comuna: 18, count: 3386 }, { comuna: 6, count: 3101 },
+      { comuna: 16, count: 2600 }, { comuna: 8, count: 2485 }, { comuna: 20, count: 2295 },
+      { comuna: 7, count: 2041 }, { comuna: 11, count: 2033 }, { comuna: 1, count: 2010 },
+      { comuna: 10, count: 1882 }, { comuna: 12, count: 1805 }, { comuna: 17, count: 1601 },
+      { comuna: 4, count: 1461 }, { comuna: 2, count: 1425 }, { comuna: 3, count: 1372 },
+      { comuna: 9, count: 1340 }, { comuna: 19, count: 1291 }, { comuna: 5, count: 1100 },
+      { comuna: 22, count: 155 },
+    ],
+    tipo: [
+      { label: "Física", count: 27755 }, { label: "Sexual", count: 13597 },
+      { label: "Psicológica", count: 3308 }, { label: "Negligencia y abandono", count: 2887 },
+    ],
+    tipoCoverage: "2013–2020",
+    sexo: [{ label: "Mujer", count: 49959 }, { label: "Hombre", count: 12869 }],
+    sexoSinDato: 0,
+    edad: [
+      { label: "< 18", count: 23250 }, { label: "18-25", count: 12288 }, { label: "26-35", count: 13049 },
+      { label: "36-45", count: 6545 }, { label: "46-60", count: 4617 }, { label: "60+", count: 2325 },
+    ],
+    agresor: [
+      { label: "No familiar", count: 5489 }, { label: "Otro familiar", count: 4217 },
+      { label: "Pareja", count: 4192 }, { label: "Ex-pareja", count: 2412 },
+      { label: "Sin dato", count: 623 },
+    ],
+    agresorCoverage: "2019–2020",
+  },
+  vif: {
+    total: 52125,
+    byYear: [[2006, 1279], [2007, 1528], [2008, 1888], [2009, 1435], [2010, 1385], [2011, 1936], [2012, 2220], [2013, 1716], [2014, 1930], [2015, 2540], [2016, 2762], [2017, 2777], [2018, 2861], [2019, 4006], [2020, 3001], [2021, 3529], [2022, 3261], [2023, 3192], [2024, 3801], [2025, 3570], [2026, 1508]].map(([year, count]) => ({ year, count })),
+    yearRange: "2006–2026",
+    lastFullYear: 2025,
+    lastFullYearCount: 3570,
+    delta: -6.1,
+  },
+  highlights: { total: 62828, pctMujeres: 80, topComuna: 13, topTipo: "Física", pctAgresorConocido: 66 },
+};
+
 // Barrios con su comuna y total histórico de hurtos 2010–2026 (de stats_barrio.csv).
 // Sirve de respaldo del buscador cuando el backend (/barrios) no responde.
 export const BARRIOS = [
