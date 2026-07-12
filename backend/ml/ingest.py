@@ -235,7 +235,7 @@ def ingest_hurto_stats():
       - stats_sitio.csv       sitio, count
       - stats_sexo.csv        sexo, count
       - stats_edad.csv        band, count
-      - stats_barrio.csv      barrio, comuna, count   (top 60 por incidentes)
+      - stats_barrio.csv      barrio, comuna, count   (TODOS los barrios de la base)
       - recent_reports.csv    date, hour, comuna, barrio, modalidad, sitio  (50 más recientes)
     """
     path = _find("consolidado")
@@ -249,8 +249,12 @@ def ingest_hurto_stats():
     sitio = Counter()
     sexo = Counter()
     edad = Counter()
-    barrio = Counter()
-    barrio_comuna: dict[str, Counter] = defaultdict(Counter)
+    # Barrios agrupados por nombre NORMALIZADO (minúsculas, sin tildes) para que
+    # «SAN PEDRO», «San Pedro» y «san pedro» cuenten como uno; se conserva la
+    # grafía más frecuente como nombre visible.
+    barrio = Counter()                                       # norm → count
+    barrio_display: dict[str, Counter] = defaultdict(Counter)  # norm → grafías
+    barrio_comuna: dict[str, Counter] = defaultdict(Counter)   # norm → comunas
     recent: list = []        # min-heap (sortkey, seq, record): 50 reportes más recientes
     seq = 0
     RECENT_LIMIT = 50
@@ -269,10 +273,12 @@ def ingest_hurto_stats():
         b = r[ix["BARRIO"]]
         bn = str(b).strip() if b is not None else ""
         comuna = _to_comuna(r[ix["COMUNA"]])
-        if bn and _norm(bn) not in ("sin dato", "none", "rural"):
-            barrio[bn] += qty
+        bkey = _norm(bn)
+        if bn and bkey not in ("sin dato", "none", "rural"):
+            barrio[bkey] += qty
+            barrio_display[bkey][bn] += qty
             if comuna is not None:
-                barrio_comuna[bn][comuna] += qty
+                barrio_comuna[bkey][comuna] += qty
 
         # Reportes recientes: conserva los 50 con fecha+hora más recientes.
         d = _to_date(r[ix["FECHA_HECHO"]])
@@ -307,9 +313,10 @@ def ingest_hurto_stats():
     with open(DATA_DIR / "stats_barrio.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["barrio", "comuna", "count"])
-        for bn, c in barrio.most_common(60):
-            cm = barrio_comuna[bn].most_common(1)
-            w.writerow([bn, cm[0][0] if cm else "", c])
+        for bkey, c in barrio.most_common():
+            display = barrio_display[bkey].most_common(1)[0][0]
+            cm = barrio_comuna[bkey].most_common(1)
+            w.writerow([display, cm[0][0] if cm else "", c])
 
     with open(DATA_DIR / "recent_reports.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
@@ -318,7 +325,7 @@ def ingest_hurto_stats():
             w.writerow(list(rec))
 
     print(f"· Estadísticas hurto: modalidad={len(modalidad)} · sitio={len(sitio)} · "
-          f"barrios={min(60, len(barrio))} (de {len(barrio)}) · recientes={len(recent)}")
+          f"barrios={len(barrio)} · recientes={len(recent)}")
 
 
 def _parse_coords(lat_v, lon_v):

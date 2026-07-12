@@ -9,20 +9,26 @@ import Travel from "../components/Travel.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "../components/Tweaks.jsx";
 import { useApiStatus, useRiskMap, useApiData, useComunaRisk } from "../lib/hooks.js";
 import { api } from "../lib/api.js";
+import { SITIOS } from "../data/sitios.js";
+import { RIOS } from "../data/rios.js";
+import { MIO_ESTACIONES, TAXI_BAHIAS } from "../data/mio.js";
 
 const TWEAK_DEFAULTS = {
   theme: "dark",
   vizType: "hex",
   audience: "ciudadano",
   language: "es",
-  palette: ["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"],
+  // Paleta «Batería» por defecto: sin rojo-peligro. El nivel alto es violeta
+  // (atención), no una acusación sobre la gente del sector. Ver PLAN.md §1.
+  palette: ["#9BD142", "#FFD166", "#FFA94D", "#A78BFA"],
+  scale: "fija", // "fija" (0–100) | "relativa" (cuartiles entre comunas por hora)
 };
 
 const PALETTES = [
+  ["#9BD142", "#FFD166", "#FFA94D", "#A78BFA"], // Batería (sin rojo) — default
   ["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"], // Cívico (verde-coral-rojo)
   ["#5FB7E6", "#A3E0F2", "#FFB454", "#E14820"], // Atlántico
   ["#7BD389", "#F2C94C", "#F2994A", "#EB5757"], // Clásico
-  ["#FFFFFF", "#FFD166", "#FF5A36", "#9B1B30"], // Mono-coral
 ];
 
 function Brand() {
@@ -136,13 +142,13 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList
   );
 }
 
-function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience, caiCount }) {
+function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience, caiCount, scale }) {
   const labels = audience === "tourist" ? {
     where: "Where are you", search: "Search neighborhood…", time: "Time of day",
-    layers: "Layers", legend: "Risk level"
+    layers: "Layers", legend: "Attention level"
   } : {
     where: "Estás en", search: "Buscar barrio o sitio…", time: "Hora del día",
-    layers: "Capas del mapa", legend: "Nivel de riesgo"
+    layers: "Capas del mapa", legend: "Nivel de atención"
   };
   const cls = riskClass(score);
   const label = audience === "tourist"
@@ -167,7 +173,7 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
             <div className="pls-now-score-n" style={{ color: palette[{low:0,mid:1,high:2,veryHigh:3}[cls]] }}>{score}</div>
             <div className="pls-now-label">
               <strong>{label}</strong>
-              {audience === "tourist" ? "Risk index right now" : "Índice de riesgo ahora"}
+              {audience === "tourist" ? "Attention level right now" : "Nivel de atención ahora"}
             </div>
           </div>
         </div>
@@ -217,6 +223,38 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
             <span className="pls-spacer"></span>
             <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-accent)" }}>{REPORTS.length}</span>
           </label>
+          <label className="pls-layer">
+            <input type="checkbox" checked={layers.sitios} onChange={e => setLayers({ ...layers, sitios: e.target.checked })} />
+            <span className="pls-layer-box"></span>
+            <span className="pls-layer-mark" style={{ color: "var(--pls-warn)" }}>★</span>
+            <span>{audience === "tourist" ? "Tourist & historic sites" : "Sitios turísticos e históricos"}</span>
+            <span className="pls-spacer"></span>
+            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{SITIOS.length}</span>
+          </label>
+          <label className="pls-layer">
+            <input type="checkbox" checked={layers.rios} onChange={e => setLayers({ ...layers, rios: e.target.checked })} />
+            <span className="pls-layer-box"></span>
+            <span className="pls-layer-mark" style={{ color: "var(--pls-cool)" }}>〰</span>
+            <span>{audience === "tourist" ? "Rivers" : "Ríos de Cali"}</span>
+            <span className="pls-spacer"></span>
+            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{RIOS.length}</span>
+          </label>
+          <label className="pls-layer">
+            <input type="checkbox" checked={layers.mio} onChange={e => setLayers({ ...layers, mio: e.target.checked })} />
+            <span className="pls-layer-box"></span>
+            <span className="pls-layer-mark" style={{ color: "#2E86DE" }}>M</span>
+            <span>{audience === "tourist" ? "MIO & bus terminal" : "MIO y Terminal de buses"}</span>
+            <span className="pls-spacer"></span>
+            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{MIO_ESTACIONES.length}</span>
+          </label>
+          <label className="pls-layer">
+            <input type="checkbox" checked={layers.taxis} onChange={e => setLayers({ ...layers, taxis: e.target.checked })} />
+            <span className="pls-layer-box"></span>
+            <span className="pls-layer-mark" style={{ color: "var(--pls-warn)" }}>T</span>
+            <span>{audience === "tourist" ? "Official taxi bays" : "Bahías de taxi"}</span>
+            <span className="pls-spacer"></span>
+            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{TAXI_BAHIAS.length}</span>
+          </label>
         </div>
       </div>
 
@@ -227,10 +265,17 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
             <div key={l} className="pls-legend-row">
               <div className="pls-legend-sw" style={{ background: palette[i] }}></div>
               <strong>{audience === "tourist" ? ["Calm","Stay aware","Alert","High alert"][i] : l}</strong>
-              <span>{["0–24","25–44","45–64","65+"][i]}</span>
+              <span>{scale === "relativa"
+                ? (audience === "tourist" ? ["calmest ¼","below avg","above avg","top ¼ now"][i] : ["¼ más tranquilo","medio-bajo","medio-alto","¼ mayor ahora"][i])
+                : ["0–24","25–44","45–64","65+"][i]}</span>
             </div>
           ))}
         </div>
+        <p style={{ fontSize: 10.5, color: "var(--pls-fg-faint)", margin: "8px 0 0", lineHeight: 1.45 }}>
+          {audience === "tourist"
+            ? "Levels describe recommended attention by area and time of day — never the people who live there. Computed from aggregated open incident data."
+            : "Los niveles describen la atención recomendada por zona y hora — nunca a las personas que viven allí. Se calculan con datos abiertos de denuncias, agregados por comuna."}
+        </p>
       </div>
 
       <div className="pls-side-section">
@@ -265,16 +310,23 @@ function Hex() { return <svg width="11" height="11" viewBox="0 0 24 24" fill="cu
 function Heat() { return <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6" opacity="0.4" /><circle cx="12" cy="12" r="3" /></svg>; }
 function Bar()  { return <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 8 L9 4 L21 9 L15 19 L3 17 Z" /></svg>; }
 
-function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSelectedZoneId, hour, layers, palette, routeFrom, routeTo, audience, riskByZone }) {
+function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSelectedZoneId, onSelectBarrio, hour, layers, palette, scale, routeFrom, routeTo, audience, riskByZone }) {
   return (
     <div className="pls-mapwrap">
       <MapH3 theme={theme} vizType={vizType}
         selectedZoneId={selectedZoneId}
         onSelectZone={setSelectedZoneId}
+        onSelectBarrio={onSelectBarrio}
         hour={hour}
         palette={palette}
+        relativeScale={scale === "relativa"}
+        tourist={audience === "tourist"}
         showCAI={layers.cai}
         showHospitals={layers.hosp}
+        showSitios={layers.sitios}
+        showRios={layers.rios}
+        showMio={layers.mio}
+        showTaxis={layers.taxis}
         routeFrom={routeFrom} routeTo={routeTo} />
       <div className="pls-map-chrome">
         <div className="pls-mode-toggle">
@@ -325,8 +377,13 @@ export default function App() {
   const [routeFrom, setRouteFrom] = useState(null);
   const [routeTo, setRouteTo] = useState(null);
   // Capas del mapa apagadas al iniciar: el usuario las activa cuando quiera.
-  const [layers, setLayers] = useState({ cai: false, hosp: false, reports: false });
+  const [layers, setLayers] = useState({ cai: false, hosp: false, reports: false, sitios: false, rios: false, mio: false, taxis: false });
   const [tweaksOpen, setTweaksOpen] = useState(false);
+
+  // El modo turista enciende automáticamente los sitios turísticos y los ríos.
+  useEffect(() => {
+    if (t.audience === "tourist") setLayers(l => ({ ...l, sitios: true, rios: true }));
+  }, [t.audience]);
 
   const status = useApiStatus();
   const riskByZone = useRiskMap(hour);
@@ -358,7 +415,8 @@ export default function App() {
   } else if (screen === "reports") {
     rail = <ReportsFeed onClose={() => setScreen("map")} />;
   } else if (screen === "travel") {
-    rail = <Travel onClose={() => setScreen("map")} tourist={t.audience === "tourist"} />;
+    rail = <Travel onClose={() => setScreen("map")} tourist={t.audience === "tourist"}
+      onShowOnMap={(keys) => { setLayers(l => ({ ...l, ...keys })); setScreen("map"); }} />;
   } else if (screen === "routes") {
     rail = <RoutePlanner onClose={() => setScreen("map")} />;
   } else if (selectedBarrio) {
@@ -391,6 +449,7 @@ export default function App() {
             palette={t.palette}
             audience={t.audience}
             caiCount={caiList.length}
+            scale={t.scale}
             barriosList={barriosList}
             onSelectBarrio={selectBarrio}
           />
@@ -398,9 +457,11 @@ export default function App() {
             vizType={t.vizType} setVizType={(v) => setTweak("vizType", v)}
             theme={t.theme} setTheme={(v) => setTweak("theme", v)}
             selectedZoneId={selectedZoneId} setSelectedZoneId={(id) => { setSelectedZoneId(id); setSelectedBarrio(null); }}
+            onSelectBarrio={selectBarrio}
             hour={hour}
             layers={layers}
             palette={t.palette}
+            scale={t.scale}
             routeFrom={routeFrom} routeTo={routeTo}
             audience={t.audience}
             riskByZone={riskByZone}
@@ -424,12 +485,15 @@ export default function App() {
           options={[
             { value: "hex",    label: "Hexágonos" },
             { value: "heat",   label: "Mapa de calor" },
-            { value: "barrio", label: "Polígonos por barrio" },
+            { value: "barrio", label: "Barrios reales (IDESC)" },
           ]}
           onChange={(v) => setTweak("vizType", v)} />
-        <TweakColor label="Paleta de riesgo" value={t.palette}
+        <TweakColor label="Paleta de atención" value={t.palette}
           options={PALETTES}
           onChange={(v) => setTweak("palette", v)} />
+        <TweakRadio label="Escala de color" value={t.scale}
+          options={[{ value: "fija", label: "Fija (0–100)" }, { value: "relativa", label: "Relativa · hora" }]}
+          onChange={(v) => setTweak("scale", v)} />
 
         <TweakSection label="Demo" />
         <TweakButton label="Salto a Aguablanca · 22:00" onClick={() => { setSelectedZoneId("aguablanca"); setHour(22); setScreen("map"); setTweaksOpen(false); }} />

@@ -343,6 +343,26 @@ def series_payload(days: int = 90, crime_ids: list[str] | None = None,
     return {"days": days, "year": ref.year, "referenceDate": ref.isoformat(), "series": out}
 
 
+# ── Población por comuna (para tasas reales por 100k hab.) ──────────────────
+@lru_cache(maxsize=1)
+def _load_population() -> dict[int, int]:
+    """Población por comuna: proyecciones del Depto. Administrativo de Planeación
+    Municipal (año 2020, las más recientes publicadas), vía «Cali en Cifras» /
+    datos.cali.gov.co (dataset `proyecciones-de-poblacion-de-cali-por-comuna-y-
+    corregimiento-2006-2020`). {comuna: habitantes}; {} si el CSV no está."""
+    path = DATA_DIR / "poblacion_comunas.csv"
+    if not path.exists():
+        return {}
+    out: dict[int, int] = {}
+    with open(path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            try:
+                out[int(r["comuna"])] = int(r["poblacion_2020"])
+            except (KeyError, TypeError, ValueError):
+                continue
+    return out
+
+
 # ── Tabla por comuna con delta real ─────────────────────────────────────────
 def comunas_table(zones: list[dict], year: int | None = None) -> list[dict]:
     """Tabla de comunas con incidentes/semana promedio histórico y delta real
@@ -377,6 +397,7 @@ def comunas_table(zones: list[dict], year: int | None = None) -> list[dict]:
 
     rows = []
     n_years = len(years) or 1
+    population = _load_population()
     for c in range(1, 23):
         total = sum(inc["by_year_comuna"].get((y, c), 0) for y in years)
         weekly = max(1, round(total / (n_years * 52)))
@@ -385,13 +406,22 @@ def comunas_table(zones: list[dict], year: int | None = None) -> list[dict]:
         delta = ((last - prev) / prev * 100) if prev > 0 else 0.0
         risks = risk_by.get(c, [])
         avg_risk = round(sum(risks) / len(risks)) if risks else 45
+        # Tasa anual por 100k hab. con población REAL (proyecciones DAPM 2020,
+        # Cali en Cifras). Si el CSV de población no está, cae a la
+        # aproximación sintética anterior.
+        hab = population.get(c)
+        if hab and last:
+            rate = round(last / hab * 100_000)
+        else:
+            rate = round(weekly * 1.4)
         rows.append({
             "comuna": f"Comuna {c}",
             "pop": sector_by.get(c, "—"),
+            "population": hab,
             "zones": zones_by.get(c, 1) or 1,
             "avgRisk": avg_risk,
             "incidents": weekly,
-            "ratePer100k": round(weekly * 1.4),
+            "ratePer100k": rate,
             "delta": round(delta, 1),
             "action": "Reforzar" if avg_risk > 55 else "Monitorear" if avg_risk > 35 else "Mantener",
         })

@@ -182,7 +182,8 @@ export const HOSPITALS = [
   { id: "h-clinica-imbanaco-s-a-s-sede-principal", name: "Clínica Imbanaco S.A.S. Sede Principal", lat: 3.42635, lon: -76.54528, phone: "6821000", address: "Cra. 38 Bis #5B2-04, Santa Isabel, Cali, Valle del Cauca" },
 ];
 
-// Touristic points
+// Touristic points (lista corta original). La capa «Sitios» del mapa usa ahora
+// el catálogo oficial completo de src/data/sitios.js (IDESC · Sec. de Turismo).
 export const TOURISM = [
   { id: "cristo-rey",   name: "Cristo Rey",          lat: 3.434, lon: -76.567, tip: "Visita antes de 5 pm; ruta de subida segura por Pance." },
   { id: "tres-cruces",  name: "Cerro de las Tres Cruces", lat: 3.461, lon: -76.560, tip: "Solo de día y acompañado; muy temprano (5-7 am)." },
@@ -236,7 +237,7 @@ export const METRICS = {
   f1: 0.819,
   rocAuc: 0.913,
   trainedOn: "1.2M registros · 2018–2025",
-  sources: ["Datos Abiertos Colombia", "SIEDCO – Policía Nacional", "DANE", "Observatorio de Seguridad Cali"],
+  sources: ["Datos Abiertos Colombia", "SIEDCO – Policía Nacional", "DANE", "Observatorio de Seguridad Cali", "IDESC – Alcaldía de Cali", "Metro Cali", "DAPM", "OpenStreetMap"],
   zonesCovered: 22,
   hexCount: 1804,
   lastUpdate: "20 may 2026 · 04:00",
@@ -342,8 +343,9 @@ export const VIOLENCE_FALLBACK = {
   highlights: { total: 62828, pctMujeres: 80, topComuna: 13, topTipo: "Física", pctAgresorConocido: 66 },
 };
 
-// Barrios con su comuna y total histórico de hurtos 2010–2026 (de stats_barrio.csv).
-// Sirve de respaldo del buscador cuando el backend (/barrios) no responde.
+// Barrios con su comuna y total histórico de hurtos 2010–2026 (subconjunto top
+// de stats_barrio.csv). Respaldo del buscador y del mapa cuando el backend
+// (/barrios, catálogo completo con ~387 barrios) no responde.
 export const BARRIOS = [
   { barrio: "San Pedro", comuna: 3, count: 7295 }, { barrio: "San Nicolás", comuna: 3, count: 4747 },
   { barrio: "San Vicente", comuna: 2, count: 2972 }, { barrio: "Lili", comuna: 17, count: 2621 },

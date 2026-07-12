@@ -15,7 +15,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import config, data, gov_stats, stats, violence
+from . import config, data, external_sources, gov_stats, stats, violence
 from . import tourism as tourism_svc  # alias: evita chocar con el endpoint def tourism()
 from .model import risk_model
 from .schemas import (
@@ -194,6 +194,14 @@ def zone_detail(zone_id: str, hour: int = Query(default=None, ge=0, le=23)) -> Z
 @app.get("/crimes", tags=["catálogos"])
 def crimes() -> list[dict]:
     return data.CRIMES
+
+
+@app.get("/crimes/external", tags=["catálogos"])
+def crimes_external() -> dict:
+    """Categorías de fuentes externas (SIJIN, Medicina Legal, …) cargadas desde
+    `ml/datasets/external/*.csv`. `ready: false` mientras no haya archivos; ver
+    el README de esa carpeta para el formato."""
+    return external_sources.payload()
 
 
 @app.get("/cai", tags=["catálogos"])
