@@ -2,8 +2,12 @@
 
 Subcarpeta dedicada exclusivamente al material visual de la entrega:
 
-- `Presentacion.pptx` — archivo de PowerPoint original.
-- `presentacion.pdf` — presentación exportada a PDF.
-- `portada.png` — imagen de la diapositiva principal.
+- `Presentacion.pptx` — presentación original (11 diapositivas, 16:9, editable
+  en PowerPoint).
+- `presentacion.pdf` — la misma presentación exportada a PDF.
+- `portada.png` — imagen de la diapositiva principal (1920×1080).
 
-*(Pendiente: agregar los archivos cuando la presentación esté lista.)*
+La presentación cubre: problema y pregunta de investigación → solución (app
+ciudadana + centro de mando) → datos y fuentes → metodología CRISP-ML → modelo
+XGBoost Poisson → resultados (ROC-AUC 0.73 · Precision@K 0.41) → arquitectura →
+IA responsable → limitaciones y próximos pasos.
