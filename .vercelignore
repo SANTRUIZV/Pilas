@@ -1,0 +1,17 @@
+# Vercel solo despliega el frontend (Vite). Todo lo demás — backend Python,
+# datos, modelo, notebooks, presentación — se excluye del deploy: no lo necesita
+# el build, evita que Vercel detecte Python por el requirements.txt de la raíz y
+# acelera la subida (los .xlsx/.pptx/.pdf son pesados).
+backend/
+data/
+models/
+notebooks/
+pipelines/
+tests/
+docs/
+reports/
+RECURSOS/
+requirements.txt
+environment.yml
+render.yaml
+PLAN.md
