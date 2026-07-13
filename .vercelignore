@@ -2,16 +2,20 @@
 # datos, modelo, notebooks, presentación — se excluye del deploy: no lo necesita
 # el build, evita que Vercel detecte Python por el requirements.txt de la raíz y
 # acelera la subida (los .xlsx/.pptx/.pdf son pesados).
-backend/
-data/
-models/
-notebooks/
-pipelines/
-tests/
-docs/
-reports/
-RECURSOS/
-requirements.txt
-environment.yml
-render.yaml
-PLAN.md
+#
+# OJO: los patrones van ANCLADOS con "/" inicial para que solo afecten la raíz.
+# Sin la barra, "data/" también excluiría "src/data/" (que el build SÍ necesita)
+# y el build de Vite fallaría.
+/backend/
+/data/
+/models/
+/notebooks/
+/pipelines/
+/tests/
+/docs/
+/reports/
+/RECURSOS/
+/requirements.txt
+/environment.yml
+/render.yaml
+/PLAN.md
