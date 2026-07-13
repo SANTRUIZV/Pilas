@@ -1,6 +1,6 @@
 """Entrena el modelo de riesgo (XGBoost · Poisson) con los datos REALES de la Alcaldía.
 
-- Carga `ml/datasets/incidents_cali.csv` (lo genera `ml/ingest.py`).
+- Carga `data/03_primary/incidents_cali.csv` (lo genera `ml/ingest.py`).
 - Features: comuna + hora/día/mes cíclicos + festivo (ver `app.features`).
 - Offset de exposición Poisson: cada celda agrega un nº distinto de días reales
   (p. ej. un lunes-festivo de enero ocurre menos veces que un lunes normal), así
@@ -172,7 +172,7 @@ def main() -> None:
 
     meta = {
         "trained_at": datetime.now().isoformat(timespec="seconds"),
-        "source": "Bases de datos · ALCA SEC UNIDOS 2010-2026 · hurtos (Cali)",
+        "source": "data/01_raw · ALCA SEC UNIDOS 2010-2026 · hurtos (Cali)",
         "n_cells": int(len(df)),
         "years": [int(y) for y in years],
         "test_year": int(test_year),

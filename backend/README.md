@@ -6,7 +6,7 @@ dashboard de gobierno. Corresponde a las **Fases 1–2** del [PLAN.md](../PLAN.m
 
 ## Datos reales
 
-El modelo se entrena con datos reales de la carpeta `../Bases de datos/`:
+El modelo se entrena con datos reales de la carpeta `../data/01_raw/`:
 
 - **`Homologado_formato_largo.xlsx` → hoja «TAB ALCALDÍA 09-19»** — ~170k
   incidentes de Cali (2010–2019) con comuna, hora, día, mes y tipo de delito.
@@ -17,13 +17,15 @@ El modelo se entrena con datos reales de la carpeta `../Bases de datos/`:
 - **`Servicios_salud_habilitados_Cali.xlsx` → «LIMPIO»** — servicios de salud
   habilitados con urgencias en Cali (45 prestadores geolocalizados con teléfono).
 
-`ml/ingest.py` agrega y limpia estas bases a CSVs; `ml/train.py` entrena el modelo.
+`ml/ingest.py` agrega y limpia estas bases a CSVs en `../data/03_primary/`;
+`ml/train.py` entrena el modelo y lo guarda en `../models/`. El pipeline completo
+puede correrse de una vez con `python ../pipelines/pipeline_ml.py`.
 
 ## Diseño clave: degradación elegante
 
 - **Sin modelo entrenado** → el API responde igual, usando la fórmula analítica
   (`baseRisk × multiplicador horario`). Solo necesita `fastapi` + `uvicorn`.
-- **Con modelo entrenado** (`models/risk_model.json`) → `/risk` usa XGBoost
+- **Con modelo entrenado** (`../models/risk_model.json`) → `/risk` usa XGBoost
   automáticamente. Cada respuesta indica la fuente con `"source": "model" | "analytic"`.
 
 Así el frontend puede integrarse desde el primer minuto y la calidad mejora
@@ -53,15 +55,15 @@ pip install -r requirements.txt    # ya instalado
 
 ```bash
 python -m ml.explore   # (opcional) inspecciona el esquema de las bases reales
-python -m ml.ingest    # Bases de datos/*.xlsx → ml/datasets/*.csv
+python -m ml.ingest    # data/01_raw/*.xlsx → data/03_primary/*.csv
 python -m ml.train     # entrena XGBoost → models/risk_model.json + meta
 ```
 
 `ingest.py` produce ~120k celdas reales (comuna × hora × día × mes × año).
 `train.py` rellena los ceros implícitos, hace **split temporal** (entrena
 2010–2017, valida en 2018) y reporta **MAE, RMSE, ROC-AUC** (celda de alto
-riesgo) y **Precision@K**. También puedes correr `ml/notebook.ipynb`
-(EDA + entrenamiento + SHAP).
+riesgo) y **Precision@K**. También puedes correr
+`../notebooks/01_exploracion_y_modelado.ipynb` (EDA + entrenamiento + SHAP).
 
 Resultado actual del entrenamiento real: ROC-AUC ≈ 0.73, Precision@K ≈ 0.41.
 
@@ -107,13 +109,15 @@ backend/
     schemas.py     Esquemas Pydantic de respuesta
     config.py      Rutas y CORS
   ml/
-    explore.py            Inspección del esquema de las bases reales (.xlsx)
-    ingest.py             Bases de datos/*.xlsx → CSVs limpios (malla comuna×hora)
-    train.py              Entrenamiento XGBoost (Poisson) + métricas + guardado
-    notebook.ipynb        EDA + entrenamiento + SHAP
-    datasets/        CSVs generados por ingest (versionados para el deploy)
-  models/          Artefactos entrenados (versionados para el deploy)
+    explore.py     Inspección del esquema de las bases reales (.xlsx)
+    ingest.py      data/01_raw/*.xlsx → CSVs limpios (malla comuna×hora)
+    train.py       Entrenamiento XGBoost (Poisson) + métricas + guardado
   requirements.txt
+
+../data/01_raw/      Excel originales (fuentes)
+../data/03_primary/  CSVs generados por ingest (versionados para el deploy)
+../models/           Artefactos entrenados (versionados para el deploy)
+../notebooks/        EDA + entrenamiento + SHAP
 ```
 
 ## Conectar el frontend

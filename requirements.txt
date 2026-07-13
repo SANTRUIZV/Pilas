@@ -1,0 +1,6 @@
+# Dependencias Python del proyecto (la fuente de verdad vive en
+# backend/requirements.txt, que es lo que instala el deploy en Render).
+-r backend/requirements.txt
+
+# Desarrollo / validación
+pytest==8.3.4

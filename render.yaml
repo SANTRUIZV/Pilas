@@ -5,8 +5,8 @@
 # anota la URL pública (p. ej. https://pilas-api.onrender.com) y configúrala como
 # `VITE_API_URL` en el build del frontend.
 #
-# Los artefactos del modelo (`backend/models/*.json`) y los CSVs
-# (`backend/ml/datasets/`) ya están versionados, así que el build NO necesita
+# Los artefactos del modelo (`models/*.json`) y los CSVs
+# (`data/03_primary/`) ya están versionados, así que el build NO necesita
 # correr `ml.ingest` ni `ml.train` — solo instala dependencias y arranca uvicorn.
 # Para regenerarlos: localmente `python -m ml.ingest && python -m ml.train`.
 

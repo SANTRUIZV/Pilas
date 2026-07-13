@@ -548,7 +548,7 @@ export function ForecastDash({ palette }) {
 }
 
 // ── Fuentes externas (SIJIN · Medicina Legal · …) ──────────────────────────
-// Muestra las categorías cargadas en backend/ml/datasets/external/. Mientras el
+// Muestra las categorías cargadas en data/03_primary/external/. Mientras el
 // equipo consigue esas bases, la pestaña explica cómo integrarlas: el objetivo
 // es que homicidios y violencia intrafamiliar entren SIN tocar código.
 export function ExternalDash({ palette }) {
@@ -578,7 +578,7 @@ export function ExternalDash({ palette }) {
             <p className="pls-sv-note" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
               Pilas ya sabe leer bases de <b>SIJIN</b> y <b>Medicina Legal</b>: basta con dejar un CSV
               agregado por <code>fuente, categoria, comuna, anio, conteo</code> en{" "}
-              <code>backend/ml/datasets/external/</code> y esta pestaña se llena sola con el total,
+              <code>data/03_primary/external/</code> y esta pestaña se llena sola con el total,
               la serie anual y el ranking de comunas de cada categoría (ver el README de esa carpeta).
               Por privacidad solo se aceptan conteos agregados, nunca registros de personas.
             </p>

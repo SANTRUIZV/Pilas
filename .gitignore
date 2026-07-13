@@ -10,6 +10,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Python (tests/ y pipelines/ en la raíz)
+__pycache__/
+.pytest_cache/
+
 # Editor / OS
 .DS_Store
 Thumbs.db

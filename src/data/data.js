@@ -63,7 +63,7 @@ export const CRIMES = [
 ];
 
 // Unidades de Policía de Cali (CAI, Estaciones y Subestaciones) ingestadas
-// desde `Bases de datos/Datos_policía_ubicación_teléfonos.xlsx` (hojas «Hoja3»
+// desde `data/01_raw/Datos_policía_ubicación_teléfonos.xlsx` (hojas «Hoja3»
 // + «Limpio», esta última con coordenadas verificadas). 60 unidades con
 // coordenadas, dirección y teléfono. Fuente generada por
 // `python -m backend.ml.ingest` y embebida aquí como respaldo del frontend
@@ -132,7 +132,7 @@ export const CAI = [
 ];
 
 // Servicios de salud habilitados con urgencias en Cali, ingestados desde
-// `Bases de datos/Servicios_salud_habilitados_Cali.xlsx` (hoja «LIMPIO»).
+// `data/01_raw/Servicios_salud_habilitados_Cali.xlsx` (hoja «LIMPIO»).
 // 45 prestadores con coordenadas, dirección y teléfono.
 export const HOSPITALS = [
   { id: "h-ips-sura-paso-ancho-cali", name: "IPS Sura Paso Ancho Cali", lat: 3.40868, lon: -76.53498, phone: "3314925", address: "Entrada A La CL13, Cra. 50 #12A-90, Cali, Valle del Cauca" },

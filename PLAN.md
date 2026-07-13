@@ -42,10 +42,10 @@ Frontend (React + Vite)
 
 Backend (FastAPI + XGBoost)  ← entrenado con DATOS REALES
   backend/app   → API (/risk, /zones, /gov/*) con fallback analítico
-  backend/ml    → ingest (Bases de datos/*.xlsx) + train (XGBoost Poisson)
+  backend/ml    → ingest (data/01_raw/*.xlsx) + train (XGBoost Poisson)
 ```
 
-**Modelo entrenado con datos reales** (`Bases de datos/`, hoja Alcaldía
+**Modelo entrenado con datos reales** (`data/01_raw/`, hoja Alcaldía
 2010–2019, ~170k incidentes): predice riesgo por **comuna × hora × día × mes**.
 Split temporal (train 2010–2017 / test 2018) · ROC-AUC ≈ 0.73 · Precision@K ≈ 0.41.
 
@@ -88,7 +88,7 @@ reales; la cabecera indica el estado (En vivo · modelo / En vivo / Demo).
 **Entregable:** dataset limpio, georreferenciado y agregado por hex + hora + día.
 
 > ✓ **Avance:** `backend/ml/ingest.py` ya procesa las bases reales de
-> `Bases de datos/` (Alcaldía 2010–2019, ~170k incidentes) a una malla limpia
+> `data/01_raw/` (Alcaldía 2010–2019, ~170k incidentes) a una malla limpia
 > comuna × hora × día × mes, más ubicaciones reales de CAI. _(Granularidad actual:
 > comuna; el salto a hexágonos H3 queda para escalar.)_
 
@@ -223,7 +223,7 @@ viabilidad técnica y potencial de escalabilidad nacional.
    - Población real por comuna (proyecciones DAPM 2020, Cali en Cifras /
      datos.cali.gov.co) → tasas por 100k verídicas en el dashboard de gobierno.
    - Integración lista para **SIJIN / Medicina Legal** (homicidios, violencia
-     intrafamiliar): CSV agregado en `backend/ml/datasets/external/` →
+     intrafamiliar): CSV agregado en `data/03_primary/external/` →
      `/crimes/external` → pestaña «Fuentes» de Estadísticas. _(A la espera de
      que consigamos esas bases.)_
 

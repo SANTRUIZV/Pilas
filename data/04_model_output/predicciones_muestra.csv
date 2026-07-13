@@ -1,0 +1,32 @@
+zona,comuna,fecha,hora,riesgo_0_100,nivel,fuente
+Ciudad Jardín,Comuna 22,2026-03-06,20,15,low,model
+Granada,Comuna 2,2026-03-06,20,100,veryHigh,model
+El Peñón,Comuna 3,2026-03-06,20,72,veryHigh,model
+San Antonio,Comuna 3,2026-03-06,20,72,veryHigh,model
+San Fernando,Comuna 9,2026-03-06,20,36,mid,model
+Versalles,Comuna 2,2026-03-06,20,100,veryHigh,model
+El Ingenio,Comuna 17,2026-03-06,20,100,veryHigh,model
+Pance,Comuna 22,2026-03-06,20,15,low,model
+Meléndez,Comuna 18,2026-03-06,20,21,low,model
+Alameda,Comuna 9,2026-03-06,20,36,mid,model
+Centro,Comuna 3,2026-03-06,20,72,veryHigh,model
+San Pascual,Comuna 3,2026-03-06,20,72,veryHigh,model
+Siloé,Comuna 20,2026-03-06,20,5,low,model
+Terrón Colorado,Comuna 1,2026-03-06,20,4,low,model
+Aguablanca,Comuna 14,2026-03-06,20,28,mid,model
+El Poblado,Comuna 13,2026-03-06,20,26,mid,model
+Mariano Ramos,Comuna 16,2026-03-06,20,14,low,model
+Chipichape,Comuna 2,2026-03-06,20,100,veryHigh,model
+Floralia,Comuna 6,2026-03-06,20,22,low,model
+La Flora,Comuna 2,2026-03-06,20,100,veryHigh,model
+Tequendama,Comuna 9,2026-03-06,20,36,mid,model
+Salomia,Comuna 4,2026-03-06,20,30,mid,model
+Chiminangos,Comuna 5,2026-03-06,20,26,mid,model
+Alfonso López,Comuna 7,2026-03-06,20,19,low,model
+Las Américas,Comuna 8,2026-03-06,20,34,mid,model
+El Dorado,Comuna 10,2026-03-06,20,33,mid,model
+La Esperanza,Comuna 11,2026-03-06,20,20,low,model
+Doce de Octubre,Comuna 12,2026-03-06,20,9,low,model
+El Retiro,Comuna 15,2026-03-06,20,26,mid,model
+El Lido,Comuna 19,2026-03-06,20,100,veryHigh,model
+Pizamos · Desepaz,Comuna 21,2026-03-06,20,22,low,model

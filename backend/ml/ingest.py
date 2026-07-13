@@ -1,4 +1,4 @@
-"""Ingesta de las bases reales (`Bases de datos/`) → CSVs limpios de entrenamiento.
+"""Ingesta de las bases reales (`data/01_raw/`) → CSVs limpios de entrenamiento.
 
 Fuente principal: hoja «ALCA SEC UNIDOS 2010-2026» de
 `Consolidado_secretaria_alcaldia_2010_2026.xlsx` — la base de HURTOS de la
@@ -8,7 +8,7 @@ con fecha, hora, comuna y barrio. Se agrega CANTIDAD a la malla
 el mes y el día de la semana se derivan de FECHA_HECHO (que viene como datetime o
 como texto `dd/mm/aaaa`).
 
-Salidas en `ml/datasets/`:
+Salidas en `data/03_primary/`:
   - incidents_cali.csv     año, comuna, hour, weekday, month, is_holiday, count  (modelo de riesgo)
   - crime_monthly.csv      conflictividad, year, month, count        (tendencias; aquí solo «Hurto persona»)
   - comuna_totals.csv      comuna, count                             (tabla de comunas)
@@ -27,10 +27,10 @@ from datetime import date, datetime, time
 
 from openpyxl import load_workbook
 
-from app.config import BASE_DIR, DATA_DIR
+from app.config import DATA_DIR, RAW_DATA_DIR
 from app.holidays import is_holiday
 
-DB_DIR = BASE_DIR.parent / "Bases de datos"
+DB_DIR = RAW_DATA_DIR
 
 
 def _norm(s) -> str:
@@ -230,7 +230,7 @@ def ingest_hurto_stats():
     «Estadísticas» de la app ciudadana: modalidad (arma), tipo de sitio, perfil
     de la víctima (sexo, edad) y barrios más afectados. Una pasada por la hoja.
 
-    Salidas en `ml/datasets/`:
+    Salidas en `data/03_primary/`:
       - stats_modalidad.csv   modalidad, count
       - stats_sitio.csv       sitio, count
       - stats_sexo.csv        sexo, count
@@ -702,7 +702,7 @@ def ingest_violencia_genero():
     eventos individuales). Agrega por año, comuna, tipo de violencia, sexo y
     edad de la víctima, y relación con el agresor.
 
-    Salidas en `ml/datasets/` (todas `label,count` salvo la anual):
+    Salidas en `data/03_primary/` (todas `label,count` salvo la anual):
       - gv_yearly.csv    year, count                (todas las hojas)
       - gv_comuna.csv    comuna, count              (todas las hojas)
       - gv_tipo.csv      tipo, count                (hojas 2013-2020; 2021-2022

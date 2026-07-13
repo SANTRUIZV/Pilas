@@ -99,7 +99,7 @@ def _unit_kind(name: str) -> str:
 
 def _load_real_cai() -> list[dict]:
     """Unidades de Policía reales (CAI + estaciones + subestaciones) de
-    ml/datasets/cai_locations.csv, ingerido del Excel de ubicaciones de la
+    data/03_primary/cai_locations.csv, ingerido del Excel de ubicaciones de la
     Policía (hoja «Hoja3»). Lista vacía si no existe el CSV."""
     import csv
     from .config import DATA_DIR
@@ -137,7 +137,7 @@ CAI = _load_real_cai() or _CAI_SYNTHETIC
 
 
 def _load_cuadrantes() -> list[dict]:
-    """Directorio de cuadrantes de Cali (de ml/datasets/cuadrantes_cali.csv).
+    """Directorio de cuadrantes de Cali (de data/03_primary/cuadrantes_cali.csv).
 
     Proviene de la hoja «ORIGINAL» del Excel de la Policía. No tiene coordenadas:
     es un listado consultable (estación, CAI, código, cuadrante, teléfono)."""
@@ -173,7 +173,7 @@ _HOSPITALS_SYNTHETIC = [
 
 def _load_health_services() -> list[dict]:
     """Servicios de salud habilitados con urgencias en Cali, de
-    ml/datasets/health_services.csv (ingerido del Excel de servicios de salud
+    data/03_primary/health_services.csv (ingerido del Excel de servicios de salud
     habilitados, hoja «LIMPIO»). Lista vacía si no existe el CSV."""
     import csv
     from .config import DATA_DIR
@@ -424,7 +424,7 @@ def nearest_zone(lat: float, lon: float) -> dict:
 
 
 def _load_comuna_totals() -> dict[int, int]:
-    """Totales reales de incidentes por comuna (de ml/datasets/comuna_totals.csv)."""
+    """Totales reales de incidentes por comuna (de data/03_primary/comuna_totals.csv)."""
     import csv
     from .config import DATA_DIR
 

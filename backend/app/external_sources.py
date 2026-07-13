@@ -5,7 +5,7 @@ por tipo de delito (homicidio, violencia intrafamiliar, …) viene de
 `crime_monthly.csv`. Este módulo agrega una tercera vía: CSVs de OTRAS fuentes
 (SIJIN, Instituto Nacional de Medicina Legal, Observatorio de Seguridad) que se
 integran SIN tocar código — basta con dejar el archivo en
-`backend/ml/datasets/external/`.
+`backend/data/03_primary/external/`.
 
 Formato esperado (una fila por fuente × categoría × comuna × año, separador coma):
 
@@ -22,7 +22,7 @@ Formato esperado (una fila por fuente × categoría × comuna × año, separador
 
 El endpoint `/crimes/external` sirve el agregado por categoría (total, serie
 anual y ranking de comunas) y la app ciudadana muestra la pestaña «Fuentes»
-cuando hay al menos una categoría cargada. Ver ml/datasets/external/README.md.
+cuando hay al menos una categoría cargada. Ver data/03_primary/external/README.md.
 """
 from __future__ import annotations
 
@@ -103,7 +103,7 @@ def payload() -> dict:
     cats = _load()
     return {
         "ready": bool(cats),
-        "dir": "backend/ml/datasets/external/",
+        "dir": "backend/data/03_primary/external/",
         "expectedColumns": ["fuente", "categoria", "comuna", "anio", "conteo"],
         "categories": cats,
     }

@@ -1,6 +1,6 @@
 {
   "trained_at": "2026-06-14T20:56:10",
-  "source": "Bases de datos · ALCA SEC UNIDOS 2010-2026 · hurtos (Cali)",
+  "source": "data/01_raw · ALCA SEC UNIDOS 2010-2026 · hurtos (Cali)",
   "n_cells": 889680,
   "years": [
     2010,

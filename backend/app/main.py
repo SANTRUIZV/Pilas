@@ -199,7 +199,7 @@ def crimes() -> list[dict]:
 @app.get("/crimes/external", tags=["catálogos"])
 def crimes_external() -> dict:
     """Categorías de fuentes externas (SIJIN, Medicina Legal, …) cargadas desde
-    `ml/datasets/external/*.csv`. `ready: false` mientras no haya archivos; ver
+    `data/03_primary/external/*.csv`. `ready: false` mientras no haya archivos; ver
     el README de esa carpeta para el formato."""
     return external_sources.payload()
 

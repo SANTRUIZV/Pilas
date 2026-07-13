@@ -1,4 +1,4 @@
-"""Exploración rápida de las bases reales (carpeta `Bases de datos/`).
+"""Exploración rápida de las bases reales (carpeta `data/01_raw/`).
 
 Lee en modo streaming (openpyxl read_only) para no cargar en memoria la hoja
 gigante de la Alcaldía. Imprime cabeceras, una muestra de filas y la
@@ -12,9 +12,9 @@ from collections import Counter
 
 from openpyxl import load_workbook
 
-from app.config import BASE_DIR
+from app.config import RAW_DATA_DIR
 
-DB_DIR = BASE_DIR.parent / "Bases de datos"
+DB_DIR = RAW_DATA_DIR
 SAMPLE = 8000
 
 

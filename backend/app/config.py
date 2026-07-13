@@ -5,8 +5,16 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # .../backend
-MODELS_DIR = BASE_DIR / "models"
-DATA_DIR = BASE_DIR / "ml" / "datasets"
+REPO_DIR = BASE_DIR.parent                          # raíz del repositorio
+
+# Estructura de datos según lineamientos del curso (ver docs/architecture.md):
+#   data/01_raw          Excel originales (datos.gov.co, Alcaldía, MinDefensa…)
+#   data/03_primary      CSVs limpios/consolidados que consume la API y el modelo
+#   models/              artefactos entrenados (XGBoost + métricas)
+RAW_DATA_DIR = REPO_DIR / "data" / "01_raw"
+DATA_DIR = REPO_DIR / "data" / "03_primary"
+MODEL_OUTPUT_DIR = REPO_DIR / "data" / "04_model_output"
+MODELS_DIR = REPO_DIR / "models"
 
 MODEL_PATH = MODELS_DIR / "risk_model.json"      # artefacto XGBoost (Booster.save_model)
 METRICS_PATH = MODELS_DIR / "model_meta.json"    # métricas + risk_scale del entrenamiento

@@ -1,6 +1,6 @@
 """Estadísticas reales para el dashboard de gobierno.
 
-Carga `ml/datasets/incidents_cali.csv` (malla agregada por comuna × hora × día de
+Carga `data/03_primary/incidents_cali.csv` (malla agregada por comuna × hora × día de
 semana × mes × año, ~120k celdas) y `crime_monthly.csv`, y deriva todo lo que el
 dashboard muestra: KPIs, series temporales por delito, alertas automáticas y
 recomendación de patrullas. Cuando el modelo está cargado, las recomendaciones

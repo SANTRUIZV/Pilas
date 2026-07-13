@@ -44,7 +44,7 @@ qué hace cada vista y muestra las cifras de las bases reales.
   guía de buses intermunicipales de la Terminal, MIO y taxi seguro.
 - **Estadísticas** con pestaña **Fuentes · SIJIN/ML**: lista para integrar
   homicidios y violencia intrafamiliar de SIJIN / Medicina Legal con solo dejar
-  un CSV en `backend/ml/datasets/external/` (ver README de esa carpeta).
+  un CSV en `data/03_primary/external/` (ver README de esa carpeta).
 - **Reportes ciudadanos** y **modo turista** (cambia idioma a inglés y enciende
   las capas de sitios y ríos), tema claro/oscuro y paletas (panel de Ajustes).
 
@@ -66,7 +66,34 @@ qué hace cada vista y muestra las cifras de las bases reales.
   - **Actividad** — feed en vivo (alertas, reportes, re-entrenamientos, sync SIEDCO).
 - **Footer ticker** con métricas técnicas (registros indexados, drift PSI, Sala COP).
 
-## Estructura
+## Estructura del repositorio
+
+Organizada según los lineamientos del curso
+([docs/Sugerencia_EstructuraRepositorio_Intermedio.txt](docs/Sugerencia_EstructuraRepositorio_Intermedio.txt)):
+
+```
+README.md · LICENSE · Changelog.md · requirements.txt · environment.yml
+docs/               Documentación técnica (evaluación)
+  planteamiento_problema.md · marco_metodologico.md (CRISP-ML) ·
+  architecture.md · data_dictionary.md · fuentes_datos.md ·
+  conclusiones.md · validacion_guide.md
+data/               Ciclo de vida de los datos (ver data/README.md)
+  01_raw/             Excel originales (datos.gov.co, Alcaldía, MinDefensa…)
+  02_intermediate/    (reservada — la limpieza sucede dentro de ingest)
+  03_primary/         CSVs limpios y consolidados que consume la API/modelo
+  04_model_output/    Predicciones de muestra del modelo
+notebooks/          EDA + entrenamiento + SHAP (01_exploracion_y_modelado.ipynb)
+pipelines/          pipeline_ml.py — ingesta → train → predicciones, de una vez
+models/             Artefactos entrenados (XGBoost + métricas)
+tests/              Calidad de datos + consistencia de inferencia (pytest)
+reports/            Figuras y reporte final
+RECURSOS/           Presentación (pptx/pdf) y portada
+.github/workflows/  CI (pytest + build del frontend)
+backend/            Código fuente Python: API FastAPI (app/) + ML (ml/)
+src/                Código fuente del frontend (React + Vite)
+```
+
+### Frontend en detalle
 
 ```
 index.html          Shell de la landing (elige vista)
