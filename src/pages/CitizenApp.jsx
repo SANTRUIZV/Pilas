@@ -7,6 +7,8 @@ import { ZoneDetail, RoutePlanner, ReportsFeed, Trends, BarrioPanel } from "../c
 import StatsView from "../components/Stats.jsx";
 import Travel from "../components/Travel.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "../components/Tweaks.jsx";
+import LocationGate, { readLocation } from "../components/LocationGate.jsx";
+import { locationLabel } from "../data/regiones.js";
 import { useApiStatus, useRiskMap, useApiData, useComunaRisk } from "../lib/hooks.js";
 import { api } from "../lib/api.js";
 import { SITIOS } from "../data/sitios.js";
@@ -96,7 +98,7 @@ function HeaderSearch({ barriosList, onSelectBarrio, audience }) {
   );
 }
 
-function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList, onSelectBarrio }) {
+function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList, onSelectBarrio, location, onChangeLocation }) {
   const labels = audience === "tourist" ? {
     map: "Map", stats: "Statistics", routes: "Safe routes", trends: "Insights", reports: "Reports", travel: "Travel"
   } : {
@@ -120,6 +122,16 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList
         <button className={screen === "travel" ? "is-on" : ""} onClick={() => setScreen("travel")}>{labels.travel}</button>
       </nav>
       <div className="pls-hd-actions">
+        {location && (
+          <button className="pls-pill" onClick={onChangeLocation}
+            title={audience === "tourist" ? "Change location" : "Cambiar ubicación"}
+            style={{ cursor: "pointer", color: "var(--pls-fg)", border: "1px solid var(--pls-line)", background: "var(--pls-bg-2)" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 21s-7-5.1-7-11a7 7 0 1 1 14 0c0 5.9-7 11-7 11Z" /><circle cx="12" cy="10" r="2.6" />
+            </svg>
+            {locationLabel(location)}
+          </button>
+        )}
         <HeaderSearch barriosList={barriosList} onSelectBarrio={onSelectBarrio} audience={audience} />
         <span className="pls-pill" title={live ? `Backend conectado · fuente: ${status.source}` : "Backend no disponible · datos demo"}>
           <span className="pls-pill-dot" style={live ? null : { background: "var(--pls-fg-faint)", boxShadow: "none", animation: "none" }}></span>
@@ -361,6 +373,10 @@ function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSele
 
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  // Ubicación elegida (departamento + ciudad). Si aún no se ha elegido, se
+  // muestra la pantalla de bienvenida (LocationGate) antes que el resto de la app.
+  const [location, setLocation] = useState(() => readLocation());
+  const [pickLocation, setPickLocation] = useState(false); // reabrir el gate para cambiarla
   // Pantalla inicial: por defecto «map», pero permite enlace directo por hash
   // (p. ej. ciudadano.html#estadisticas) para compartir cada vista.
   const [screen, setScreen] = useState(() => {
@@ -430,10 +446,22 @@ export default function App() {
     rail = <Trends palette={t.palette} />;
   }
 
+  // Puerta de ubicación: se muestra al entrar (sin ubicación elegida) o cuando
+  // el usuario pide cambiarla. Bloquea la app hasta confirmar ciudad/departamento.
+  if (!location || pickLocation) {
+    return (
+      <LocationGate
+        initial={location}
+        onConfirm={(loc) => { setLocation(loc); setPickLocation(false); }}
+      />
+    );
+  }
+
   return (
     <div className="pls-app" data-screen-label={screen === "map" ? "01 Mapa" : screen === "stats" ? "02 Estadísticas" : screen === "routes" ? "03 Rutas" : screen === "trends" ? "04 Pulso" : screen === "travel" ? "06 Viaje" : "05 Reportes"}>
       <Header screen={screen} setScreen={setScreen} audience={t.audience} onOpenTweaks={() => setTweaksOpen(v => !v)} status={status}
-        barriosList={barriosList} onSelectBarrio={selectBarrio} />
+        barriosList={barriosList} onSelectBarrio={selectBarrio}
+        location={location} onChangeLocation={() => setPickLocation(true)} />
       {screen === "stats" ? (
         <div className="pls-main pls-main--stats">
           <StatsView palette={t.palette} live={status?.online} />
@@ -472,6 +500,10 @@ export default function App() {
       <Footer score={score} audience={t.audience} />
 
       <TweaksPanel title="Ajustes" open={tweaksOpen} onClose={() => setTweaksOpen(false)}>
+        <TweakSection label="Ubicación" />
+        <TweakButton label={`Cambiar · ${locationLabel(location)}`}
+          onClick={() => { setTweaksOpen(false); setPickLocation(true); }} />
+
         <TweakSection label="Tema y modo" />
         <TweakRadio label="Tema" value={t.theme}
           options={["dark", "light"]}

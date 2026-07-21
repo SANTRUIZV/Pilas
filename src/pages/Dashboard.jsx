@@ -6,6 +6,7 @@ import { CRIMES, METRICS, ZONES } from "../data/data.js";
 import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "../data/data-gov.js";
 import { useApiStatus, useApiData } from "../lib/hooks.js";
 import { api } from "../lib/api.js";
+import { useAuth } from "../components/AuthGate.jsx";
 
 // Paleta de riesgo del dashboard (verde→rojo), compartida por mapa y charts.
 const GOV_PALETTE = ["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"];
@@ -35,6 +36,9 @@ function deltaSign(d) {
 // ── Header ──────────────────────────────────────────────────────────────
 function GovHeader({ period, setPeriod, year, setYear, years, status }) {
   const live = status?.online;
+  const { user, signOut } = useAuth();
+  // Iniciales del usuario para el avatar (a partir del correo).
+  const initials = (user?.email || "CL").replace(/@.*/, "").slice(0, 2).toUpperCase();
   return (
     <header className="gov-hd">
       <div className="pls-brand">
@@ -82,7 +86,14 @@ function GovHeader({ period, setPeriod, year, setYear, years, status }) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 12h18M13 5l8 7-8 7"/></svg>
           App ciudadano
         </a>
-        <div className="pls-avatar" style={{ background: "linear-gradient(135deg, #5FB7E6, #2A6FDB)" }}>CL</div>
+        <button className="pls-pill" onClick={signOut} title={user?.email ? `Sesión: ${user.email}` : "Cerrar sesión"}
+          style={{ cursor: "pointer", color: "var(--pls-fg)", border: "1px solid var(--pls-line)", background: "var(--pls-bg-2)" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+          Salir
+        </button>
+        <div className="pls-avatar" style={{ background: "linear-gradient(135deg, #5FB7E6, #2A6FDB)" }} title={user?.email || ""}>{initials}</div>
       </div>
     </header>
   );

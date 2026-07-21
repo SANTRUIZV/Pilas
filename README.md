@@ -21,6 +21,10 @@ qué hace cada vista y muestra las cifras de las bases reales.
 
 ### App ciudadana (`ciudadano.html`)
 
+- **Selector de ubicación** al entrar: el usuario elige **departamento y ciudad**
+  antes de ver el mapa. Hoy solo está habilitado **Valle del Cauca · Cali** (el
+  resto aparece como «Próximamente»); la elección se recuerda y se puede cambiar
+  desde la cabecera o Ajustes.
 - **Mapa de atención** sobre **OpenStreetMap** (Leaflet) con **grilla hexagonal H3
   de Uber**: cada hexágono se asigna a su comuna (límites reales IDESC de las
   **22 comunas de Cali**) y se colorea por el riesgo del modelo a la hora
@@ -50,6 +54,10 @@ qué hace cada vista y muestra las cifras de las bases reales.
 
 ### Dashboard gubernamental (`gobierno.html`)
 
+- **Acceso con inicio de sesión** (Firebase Authentication · email + contraseña):
+  el Centro de Mando exige autenticarse antes de mostrar el tablero, con opción de
+  cerrar sesión desde la cabecera. Se configura con `VITE_FIREBASE_*` (ver
+  [.env.example](.env.example)); sin proyecto configurado usa un *modo demo* local.
 - **6 KPIs estratégicos** con sparklines y delta vs. período anterior
   (incidentes 7d, hurto de celular, precisión del modelo, alertas activas,
   patrullas asignadas, tiempo de respuesta).
@@ -114,6 +122,8 @@ src/
     Panels.jsx        Paneles del rail ciudadano (zona, ruta, pulso, reportes, barrio)
     Stats.jsx         Vista de estadísticas de hurtos (app ciudadana)
     Tweaks.jsx        Panel de Ajustes (tema, audiencia, viz, paleta)
+    LocationGate.jsx  Selector de departamento/ciudad al entrar (app ciudadana)
+    AuthGate.jsx      Puerta de login del Centro de Mando (Firebase Auth)
     MapH3.jsx         Mapa OpenStreetMap (Leaflet) + hexágonos H3 (Uber) · compartido
   data/              Datos base de Cali (fallback cuando el backend no está)
     data.js           Zonas, CAI, hospitales, barrios, métricas, estadísticas
@@ -124,9 +134,11 @@ src/
     rios.js           Los 7 ríos de Cali (OpenStreetMap, polilíneas)
     mio.js            88 estaciones del MIO (Metro Cali) + 396 bahías de taxi (DAPM)
     transporte.js     Terminal de Transportes (guía curada) + tips de taxi seguro
+    regiones.js       Departamentos y ciudades del selector de ubicación (solo Cali activo)
   lib/               Integración con el backend
     api.js            Cliente HTTP del backend (FastAPI)
     hooks.js          Hooks: estado de conexión, mapa de riesgo, fetch genérico
+    firebase.js       Inicialización de Firebase Auth (login del gobierno)
   styles/            Sistema de diseño
     styles.css        Tokens, layout y componentes base (compartido)
     landing.css       Estilos de la landing y la página de creadores
