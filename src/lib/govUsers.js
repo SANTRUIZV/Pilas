@@ -19,6 +19,17 @@ export function isMasterEmail(email) {
   return !!email && !!masterEmail && email.trim().toLowerCase() === masterEmail;
 }
 
+// Envuelve una promesa con un límite de tiempo. Firestore, cuando la base de
+// datos aún no existe o la red falla, puede quedarse colgado reintentando en vez
+// de rechazar; sin este tope la puerta de acceso se quedaría esperando para
+// siempre (pantalla en blanco). Ver AuthGate.
+function withTimeout(promise, ms, label = "timeout") {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label)), ms)),
+  ]);
+}
+
 // Lee el registro de acceso del usuario autenticado. { role, email, ... } o null.
 async function fetchAccessRecord(uid) {
   const { doc, getDoc } = await import("firebase/firestore");
@@ -39,13 +50,16 @@ async function ensureMasterRecord(user) {
 // Resuelve el acceso de un usuario recién autenticado. Devuelve
 // { uid, email, role } si está autorizado, o null si no lo está.
 export async function resolveAccess(user) {
-  // La cuenta master siempre entra; de paso se asegura su documento.
+  // La cuenta master SIEMPRE entra, sin depender de Firestore: el registro de su
+  // documento se hace en segundo plano (best-effort), para que pueda entrar
+  // aunque Firestore aún no esté configurado.
   if (isMasterEmail(user.email)) {
-    try { await ensureMasterRecord(user); } catch { /* Firestore aún sin configurar: no bloquea al master */ }
+    withTimeout(ensureMasterRecord(user), 8000).catch(() => { /* best-effort */ });
     return { uid: user.uid, email: user.email, role: "master" };
   }
-  // El resto debe estar en el allowlist.
-  const rec = await fetchAccessRecord(user.uid);
+  // El resto debe estar en el allowlist. Con tope de tiempo: si Firestore no
+  // responde, se rechaza y AuthGate muestra un aviso en lugar de colgarse.
+  const rec = await withTimeout(fetchAccessRecord(user.uid), 12000, "firestore-timeout");
   if (rec?.role) return { uid: user.uid, email: user.email, role: rec.role };
   return null;
 }
@@ -53,7 +67,7 @@ export async function resolveAccess(user) {
 // Lista todos los usuarios autorizados (solo la master puede leer la colección).
 export async function listUsers() {
   const { collection, getDocs } = await import("firebase/firestore");
-  const snap = await getDocs(collection(db, COLLECTION));
+  const snap = await withTimeout(getDocs(collection(db, COLLECTION)), 12000, "firestore-timeout");
   return snap.docs
     .map(d => ({ uid: d.id, ...d.data() }))
     .sort((a, b) => (a.role === "master" ? -1 : b.role === "master" ? 1 : 0)

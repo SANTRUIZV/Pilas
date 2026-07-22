@@ -75,6 +75,10 @@ const AUTH_STYLE = `
   .gauth-foot{font-size:10.5px;color:var(--pls-fg-faint);text-align:center;margin:18px 0 0;
     line-height:1.5;border-top:1px solid var(--pls-line);padding-top:14px}
   .gauth-demo{font-size:11px;color:var(--pls-warn);text-align:center;margin:10px 0 0}
+  .gauth-spinner{width:26px;height:26px;border-radius:50%;
+    border:2.5px solid var(--pls-line-2);border-top-color:var(--pls-cool);
+    animation:gauth-spin .7s linear infinite}
+  @keyframes gauth-spin{to{transform:rotate(360deg)}}
 `;
 
 function BrandMark() {
@@ -86,6 +90,23 @@ function BrandMark() {
       <rect x="8.5" y="9" width="2" height="6" fill="currentColor" />
       <rect x="11.5" y="9" width="2" height="6" fill="currentColor" />
     </svg>
+  );
+}
+
+// Pantalla de carga mientras se verifica la sesión (evita el blanco indefinido).
+function AuthLoading() {
+  return (
+    <div className="gauth-gate">
+      <style>{AUTH_STYLE}</style>
+      <div className="gauth-card" style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+        <span className="gauth-brand-mark" aria-hidden><BrandMark /></span>
+        <div style={{ fontFamily: "var(--pls-display)", fontSize: 17, fontWeight: 600 }}>Verificando acceso…</div>
+        <div className="gauth-spinner" aria-hidden />
+        <div style={{ fontSize: 11.5, color: "var(--pls-fg-faint)", lineHeight: 1.5 }}>
+          Centro de Mando · Cali
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -238,7 +259,9 @@ export default function AuthGate({ children }) {
     setUser(demoUser);
   };
 
-  if (!ready) return null; // evita parpadeo del login mientras Firebase resuelve la sesión
+  // Mientras Firebase resuelve la sesión y el allowlist, una pantalla de carga
+  // (nunca un blanco indefinido: si algo se cuelga, resolveAccess tiene timeout).
+  if (!ready) return <AuthLoading />;
 
   if (!user) return <LoginForm onDemoSignIn={demoSignIn} notice={notice} />;
 
