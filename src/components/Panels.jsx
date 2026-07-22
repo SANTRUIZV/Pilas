@@ -1,13 +1,13 @@
 // Panels: Zone detail, Route planner, Trends, Reports — app ciudadana.
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ZONES, CAI, HOSPITALS, CRIMES, HOURS, TIPS, REPORTS, METRICS,
-  riskClass, riskLabel, riskScore, localBarrioDetail,
+  normText, riskClass, riskLabel, riskScore, localBarrioDetail,
 } from "../data/data.js";
 import { COMUNAS } from "../data/comunas.js";
 import { api } from "../lib/api.js";
 import { useApiData } from "../lib/hooks.js";
-import { walkMinutes } from "../lib/routing.js";
+import { walkMinutes, geocode } from "../lib/routing.js";
 
 // ── Risk chip ───────────────────────────────────────────────────────────
 export function RiskChip({ score, palette }) {
@@ -245,38 +245,112 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
 // «Mi ubicación» cuando el navegador la comparte. Ordenados por nombre.
 const ROUTE_PLACES = [...ZONES].sort((a, b) => a.name.localeCompare(b.name, "es"));
 
-function PlaceSelect({ value, onChange, placeholder, allowGeo, tourist }) {
-  const [geo, setGeo] = useState("idle"); // idle | locating | error
+// Buscador de lugar con autocompletado. El usuario escribe su ubicación (una
+// dirección, un barrio o un sitio de Cali) y la resuelve con geocodificación real
+// (Nominatim). También sugiere las zonas representativas al instante y permite
+// usar el GPS del dispositivo. Al elegir, entrega { id, name, lat, lon }.
+function PlacePicker({ value, onChange, placeholder, allowGeo, tourist }) {
+  const [text, setText] = useState(value?.name || "");
+  const [results, setResults] = useState([]);   // resultados geocodificados
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);       // consultando Nominatim
+  const [geo, setGeo] = useState("idle");         // idle | locating | error
+  const boxRef = useRef(null);
+
+  // Sincroniza el texto cuando el valor cambia desde fuera (intercambio, mapa…).
+  useEffect(() => { setText(value?.name || ""); }, [value?.id, value?.name]);
+
+  // Cierra el desplegable al hacer clic fuera.
+  useEffect(() => {
+    const onDown = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  const nq = normText(text);
+  // Zonas representativas que coinciden (instantáneo, sin red).
+  const local = (nq && text !== value?.name)
+    ? ROUTE_PLACES.filter(p => normText(p.name).includes(nq)).slice(0, 4)
+    : [];
+
+  // Geocodificación real con debounce (respeta el límite de Nominatim).
+  useEffect(() => {
+    if (!open || nq.length < 3 || text === value?.name) { setResults([]); setBusy(false); return; }
+    let alive = true;
+    setBusy(true);
+    const id = setTimeout(() => {
+      geocode(text)
+        .then(rows => { if (alive) { setResults(rows); setBusy(false); } })
+        .catch(() => { if (alive) { setResults([]); setBusy(false); } });
+    }, 450);
+    return () => { alive = false; clearTimeout(id); };
+  }, [text, nq, open, value?.name]);
+
+  function pick(p) {
+    onChange({ id: p.id || "geo", name: p.name, lat: p.lat, lon: p.lon });
+    setText(p.name); setResults([]); setOpen(false);
+  }
+
   function useMyLocation() {
     if (!navigator.geolocation) { setGeo("error"); return; }
     setGeo("locating");
     navigator.geolocation.getCurrentPosition(
-      (p) => { setGeo("idle"); onChange({ id: "__me", name: tourist ? "My location" : "Mi ubicación", lat: p.coords.latitude, lon: p.coords.longitude }); },
+      (p) => {
+        setGeo("idle");
+        const label = tourist ? "My location" : "Mi ubicación";
+        onChange({ id: "__me", name: label, lat: p.coords.latitude, lon: p.coords.longitude });
+        setText(label); setOpen(false);
+      },
       () => setGeo("error"),
       { enableHighAccuracy: true, timeout: 8000 },
     );
   }
+
+  // Lista combinada: zonas locales primero, luego direcciones geocodificadas
+  // (sin duplicar las que ya salen como zona).
+  const suggestions = [
+    ...local.map(p => ({ id: p.id, name: p.name, sub: p.comuna, lat: p.lat, lon: p.lon })),
+    ...results
+      .filter(r => !local.some(l => normText(l.name) === normText(r.name)))
+      .map(r => ({ ...r, sub: r.sub })),
+  ];
+  const showList = open && (suggestions.length > 0 || busy);
+
   return (
-    <div className="pls-route-field">
-      <select
-        className="pls-route-select"
-        value={value?.id || ""}
-        onChange={(e) => {
-          const z = ROUTE_PLACES.find(p => p.id === e.target.value);
-          onChange(z ? { id: z.id, name: z.name, lat: z.lat, lon: z.lon } : null);
-        }}
-      >
-        <option value="">{placeholder}</option>
-        {value?.id === "__me" && <option value="__me">{value.name}</option>}
-        {ROUTE_PLACES.map(p => (
-          <option key={p.id} value={p.id}>{p.name} · {p.comuna}</option>
-        ))}
-      </select>
+    <div className="pls-route-field" ref={boxRef}>
+      <input
+        className="pls-route-input"
+        value={text}
+        placeholder={placeholder}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { setText(e.target.value); setOpen(true); if (!e.target.value) onChange(null); }}
+        onKeyDown={(e) => { if (e.key === "Enter" && suggestions[0]) { e.preventDefault(); pick(suggestions[0]); } }}
+      />
+      {text && (
+        <button type="button" className="pls-route-clear"
+          onClick={() => { setText(""); setResults([]); onChange(null); setOpen(true); }}
+          aria-label={tourist ? "Clear" : "Limpiar"}>✕</button>
+      )}
       {allowGeo && (
         <button type="button" className="pls-route-geo" onClick={useMyLocation}
           title={tourist ? "Use my location" : "Usar mi ubicación"}>
           {geo === "locating" ? "…" : "◎"}
         </button>
+      )}
+      {showList && (
+        <ul className="pls-route-suggest">
+          {suggestions.map(s => (
+            <li key={s.id}>
+              <button type="button" onClick={() => pick(s)}>
+                <span className="pls-route-suggest-name">{s.name}</span>
+                <span className="pls-route-suggest-sub">{s.sub}</span>
+              </button>
+            </li>
+          ))}
+          {busy && suggestions.length === 0 && (
+            <li className="pls-route-suggest-empty">{tourist ? "Searching…" : "Buscando…"}</li>
+          )}
+        </ul>
       )}
     </div>
   );
@@ -299,21 +373,21 @@ export function RoutePlanner({ from, to, setFrom, setTo, route, palette, tourist
       <div className="pls-section">
         <div className="pls-route-form">
           <span className="pls-route-pin is-from">A</span>
-          <PlaceSelect value={from} onChange={setFrom} tourist={tourist} allowGeo
-            placeholder={t("Punto de partida", "Starting point")} />
+          <PlacePicker value={from} onChange={setFrom} tourist={tourist} allowGeo
+            placeholder={t("Escribe tu punto de partida", "Type your starting point")} />
           <button type="button" className="pls-route-swap" onClick={swap}
             title={t("Intercambiar", "Swap")} disabled={!from || !to}>⇅</button>
           <span className="pls-route-pin is-to">B</span>
-          <PlaceSelect value={to} onChange={setTo} tourist={tourist}
-            placeholder={t("Destino", "Destination")} />
+          <PlacePicker value={to} onChange={setTo} tourist={tourist} allowGeo
+            placeholder={t("Escribe tu destino", "Type your destination")} />
         </div>
       </div>
 
       {/* Estados: reposo · calculando · error · resultado */}
       {(!from || !to) && (
         <div className="pls-empty">
-          <p>{t("Elige tu punto de partida y tu destino.",
-                "Pick your starting point and destination.")}</p>
+          <p>{t("Escribe tu ubicación y tu destino, o usa el GPS con ◎.",
+                "Type your location and destination, or use GPS with ◎.")}</p>
           <p className="pls-foot-mute">
             {t("Pilas traza la ruta real por las calles y elige la más segura según el nivel de atención de cada zona a esta hora.",
                "Pilas draws the real street route and picks the safest one by each area's attention level at this hour.")}

@@ -13,6 +13,35 @@
 import { COMUNA_POLYS } from "../data/comunas.js";
 
 const OSRM = "https://router.project-osrm.org";
+const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+// Caja de encuadre de Cali y su área (left,top,right,bottom = minLon,maxLat,maxLon,minLat)
+// para sesgar la búsqueda de direcciones a la ciudad.
+const CALI_VIEWBOX = "-76.62,3.52,-76.42,3.30";
+
+// Geocodificación: convierte lo que el usuario escribe (dirección, barrio, sitio)
+// en coordenadas, usando Nominatim (OpenStreetMap, sin API key), acotado a Cali.
+// Devuelve [{ id, name, sub, lat, lon }]. Con menos de 3 caracteres no consulta.
+export async function geocode(query, { timeout = 7000, limit = 6 } = {}) {
+  const qs = (query || "").trim();
+  if (qs.length < 3) return [];
+  const url = `${NOMINATIM}?format=jsonv2&q=${encodeURIComponent(qs)}`
+    + `&countrycodes=co&viewbox=${CALI_VIEWBOX}&bounded=1&limit=${limit}&addressdetails=1`;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, headers: { "Accept-Language": "es" } });
+    if (!r.ok) throw new Error(`geocode ${r.status}`);
+    const rows = await r.json();
+    return rows.map(row => {
+      const a = row.address || {};
+      const name = row.name || (row.display_name || "").split(",")[0];
+      const sub = a.neighbourhood || a.suburb || a.road || a.city_district || "Cali";
+      return { id: `geo-${row.place_id}`, name, sub, lat: parseFloat(row.lat), lon: parseFloat(row.lon) };
+    }).filter(p => !Number.isNaN(p.lat) && !Number.isNaN(p.lon));
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 // Punto dentro de un anillo [lat, lon] por ray-casting (lat = y, lon = x).
 function inRing(lat, lon, ring) {

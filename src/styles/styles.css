@@ -1103,15 +1103,41 @@ button { font-family: inherit; color: inherit; }
 }
 .pls-route-swap:disabled { opacity: 0.4; cursor: default; }
 .pls-route-field {
-  grid-column: 2; display: flex; align-items: center; gap: 6px;
+  grid-column: 2; position: relative;
+  display: flex; align-items: center; gap: 6px;
   background: var(--pls-bg-2); border: 1px solid var(--pls-line);
   border-radius: var(--pls-r-1, 10px); padding: 2px 4px 2px 10px;
 }
-.pls-route-select {
-  flex: 1; background: transparent; border: 0; outline: none;
+.pls-route-field:focus-within { border-color: var(--pls-cool); }
+.pls-route-input {
+  flex: 1; min-width: 0; background: transparent; border: 0; outline: none;
   color: var(--pls-fg); font-family: inherit; font-size: 13px; padding: 9px 0;
 }
-.pls-route-select option { background: var(--pls-bg-2); color: var(--pls-fg); }
+.pls-route-input::placeholder { color: var(--pls-fg-mute); }
+.pls-route-clear {
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
+  background: transparent; border: 0; color: var(--pls-fg-mute);
+  cursor: pointer; font-size: 12px; line-height: 1;
+}
+.pls-route-clear:hover { color: var(--pls-fg); }
+/* Desplegable de sugerencias (zonas + direcciones geocodificadas) */
+.pls-route-suggest {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+  list-style: none; margin: 0; padding: 4px;
+  background: var(--pls-bg-2); border: 1px solid var(--pls-line);
+  border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+  max-height: 240px; overflow-y: auto;
+}
+.pls-route-suggest > li { margin: 0; }
+.pls-route-suggest > li > button {
+  width: 100%; display: flex; flex-direction: column; gap: 1px;
+  padding: 8px 10px; border: 0; border-radius: 8px; cursor: pointer;
+  background: transparent; color: var(--pls-fg); text-align: left; font: inherit;
+}
+.pls-route-suggest > li > button:hover { background: color-mix(in oklch, var(--pls-cool) 12%, var(--pls-bg-2)); }
+.pls-route-suggest-name { font-size: 13px; }
+.pls-route-suggest-sub { font-size: 11px; color: var(--pls-fg-mute); }
+.pls-route-suggest-empty { padding: 8px 10px; font-size: 12px; color: var(--pls-fg-mute); }
 .pls-route-geo {
   width: 28px; height: 28px; flex-shrink: 0; border-radius: 7px;
   background: transparent; border: 1px solid var(--pls-line);
