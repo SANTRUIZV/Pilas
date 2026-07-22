@@ -534,7 +534,7 @@ function GovMap({ year, focusZoneId, focusLabel, onClearFocus }) {
     : "Mapa operativo · ahora";
   return (
     <div className="gov-map-block">
-      <MapH3 theme="dark" vizType="hex" hour={hour}
+      <MapH3 theme="dark" vizType="barrio" hour={hour}
         palette={GOV_PALETTE}
         showCAI={true} zoomPosition="topright"
         selectedZoneId={focusZoneId} />

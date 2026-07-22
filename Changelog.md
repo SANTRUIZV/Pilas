@@ -4,6 +4,21 @@ Registro cronológico de versiones y cambios del proyecto Pilas.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/); el
 detalle commit a commit está en el historial de Git.
 
+## [0.7.0] — 2026-07-22
+
+### Agregado
+- **Ruta segura con trazado real**: el planificador de rutas de la app ciudadana
+  ahora calcula rutas que siguen las calles reales (OpenStreetMap vía OSRM),
+  pide varias alternativas y recomienda la más segura según el nivel de atención
+  de las comunas que atraviesa a la hora seleccionada (`src/lib/routing.js`,
+  hook `useSafeRoute`). Muestra distancia, tiempo a pie estimado, nivel de la
+  ruta y las zonas que cruza. Origen/destino seleccionables, con opción de usar
+  la ubicación del dispositivo.
+
+### Cambiado
+- La **vista por barrios** (límites reales IDESC) pasa a ser la predeterminada
+  del mapa, tanto en la app ciudadana como en el Centro de Mando del gobierno.
+
 ## [0.6.0] — 2026-07-13
 
 ### Cambiado

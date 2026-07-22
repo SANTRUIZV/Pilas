@@ -1,8 +1,9 @@
 // Hooks de integración con el API, con fallback a datos estáticos.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./api.js";
 import { COMUNAS } from "../data/comunas.js";
 import { HOURS } from "../data/data.js";
+import { fetchRoutes, scoreRoute } from "./routing.js";
 
 // Riesgo por comuna {n: risk} para una hora. Usa el modelo (/risk/comunas); si
 // el backend no responde, cae a un cálculo analítico local (baseRisk × hora).
@@ -58,6 +59,42 @@ export function useRiskMap(hour) {
     return () => { live = false; };
   }, [hour]);
   return riskByZone;
+}
+
+// Ruta segura entre dos puntos { lat, lon }. Pide rutas reales a OSRM (siguen las
+// calles) y las puntúa por el nivel de atención de las comunas que atraviesan a la
+// hora dada (`byComuna`). Devuelve { routes, best, loading, error } donde `best`
+// es la alternativa más segura. Sin origen o destino, queda en reposo.
+export function useSafeRoute(from, to, byComuna) {
+  const [state, setState] = useState({ routes: [], best: null, loading: false, error: null });
+  // El riesgo por comuna se lee por ref para no re-pedir la ruta cada vez que
+  // llega una actualización del modelo: sólo re-rutea al cambiar origen/destino.
+  const riskRef = useRef(byComuna);
+  riskRef.current = byComuna;
+
+  useEffect(() => {
+    if (!from || !to || from.lat == null || to.lat == null) {
+      setState({ routes: [], best: null, loading: false, error: null });
+      return;
+    }
+    let alive = true;
+    setState(s => ({ ...s, loading: true, error: null }));
+    const riskOf = (n) => riskRef.current?.[n] ?? 0;
+    fetchRoutes(from, to)
+      .then(routes => {
+        if (!alive) return;
+        const scored = routes.map(rt => ({ ...rt, ...scoreRoute(rt.geometry, riskOf) }));
+        // Más segura = menor riesgo; a igualdad, la más corta.
+        const best = [...scored].sort((a, b) => a.risk - b.risk || a.distance - b.distance)[0];
+        scored.forEach(rt => { rt.isBest = rt === best; });
+        setState({ routes: scored, best, loading: false, error: null });
+      })
+      .catch(err => {
+        if (alive) setState({ routes: [], best: null, loading: false, error: err?.message || "error" });
+      });
+    return () => { alive = false; };
+  }, [from?.lat, from?.lon, to?.lat, to?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
+  return state;
 }
 
 // Genérico: ejecuta `fetcher` y devuelve sus datos; mientras tanto (o si falla)

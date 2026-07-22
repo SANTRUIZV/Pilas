@@ -101,6 +101,8 @@ export default function MapH3({
   tourist = false,
   routeFrom,
   routeTo,
+  routeGeo,   // geometría real de la ruta más segura: [[lat, lon], ...]
+  routeAlts,  // geometrías de las alternativas (tenues): [[[lat,lon]...], ...]
   zoomPosition = "topleft",
 }) {
   const containerRef = useRef(null);
@@ -422,18 +424,37 @@ export default function MapH3({
   }, [showTaxis, tourist]);
 
   // ── Ruta ────────────────────────────────────────────────────────────────
+  // Con `routeGeo` dibuja la ruta REAL siguiendo las calles (OSRM); las
+  // alternativas van tenues detrás. Sin geometría (aún calculando o sin backend
+  // de rutas), cae a una recta punteada entre origen y destino.
   useEffect(() => {
     const layer = routeLayerRef.current;
+    const map = mapRef.current;
     if (!layer) return;
     layer.clearLayers();
-    if (routeFrom && routeTo) {
-      L.polyline([[routeFrom.lat, routeFrom.lon], [routeTo.lat, routeTo.lon]], {
-        color: "#FF5A36", weight: 3, dashArray: "8 6",
-      }).addTo(layer);
-      L.circleMarker([routeFrom.lat, routeFrom.lon], { radius: 6, color: "#0E1116", weight: 2, fillColor: "#F5F0E8", fillOpacity: 1 }).addTo(layer);
-      L.circleMarker([routeTo.lat, routeTo.lon], { radius: 6, color: "#0E1116", weight: 2, fillColor: "#FF5A36", fillOpacity: 1 }).addTo(layer);
+
+    for (const g of routeAlts || []) {
+      if (g?.length) L.polyline(g, { color: "#8892A0", weight: 3, opacity: 0.35 }).addTo(layer);
     }
-  }, [routeFrom, routeTo]);
+
+    if (routeGeo?.length) {
+      // Halo + trazo para que la ruta segura resalte sobre cualquier capa.
+      L.polyline(routeGeo, { color: "#0E1116", weight: 7, opacity: 0.35 }).addTo(layer);
+      L.polyline(routeGeo, { color: "#5FB7E6", weight: 4, opacity: 0.95 }).addTo(layer);
+    } else if (routeFrom && routeTo) {
+      L.polyline([[routeFrom.lat, routeFrom.lon], [routeTo.lat, routeTo.lon]], {
+        color: "#5FB7E6", weight: 3, dashArray: "8 6", opacity: 0.8,
+      }).addTo(layer);
+    }
+
+    if (routeFrom) L.circleMarker([routeFrom.lat, routeFrom.lon], { radius: 6, color: "#0E1116", weight: 2, fillColor: "#F5F0E8", fillOpacity: 1 }).bindTooltip(routeFrom.name || "Origen", { direction: "top" }).addTo(layer);
+    if (routeTo) L.circleMarker([routeTo.lat, routeTo.lon], { radius: 6, color: "#0E1116", weight: 2, fillColor: "#5FB7E6", fillOpacity: 1 }).bindTooltip(routeTo.name || "Destino", { direction: "top" }).addTo(layer);
+
+    // Encuadra la ruta calculada para que se vea completa.
+    if (routeGeo?.length && map) {
+      try { map.fitBounds(L.latLngBounds(routeGeo).pad(0.25)); } catch { /* noop */ }
+    }
+  }, [routeFrom, routeTo, routeGeo, routeAlts]);
 
   // ── Recoloreado por riesgo / selección ──────────────────────────────────
   function paint() {

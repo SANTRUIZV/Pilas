@@ -8,7 +8,7 @@ import Travel from "../components/Travel.jsx";
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor, TweakButton } from "../components/Tweaks.jsx";
 import LocationGate, { readLocation } from "../components/LocationGate.jsx";
 import { locationLabel } from "../data/regiones.js";
-import { useApiStatus, useRiskMap, useApiData, useComunaRisk } from "../lib/hooks.js";
+import { useApiStatus, useRiskMap, useApiData, useComunaRisk, useSafeRoute } from "../lib/hooks.js";
 import { api } from "../lib/api.js";
 import { SITIOS } from "../data/sitios.js";
 import { RIOS } from "../data/rios.js";
@@ -16,7 +16,9 @@ import { MIO_ESTACIONES, TAXI_BAHIAS } from "../data/mio.js";
 
 const TWEAK_DEFAULTS = {
   theme: "dark",
-  vizType: "hex",
+  // Vista por defecto: barrios reales (IDESC). El usuario puede cambiar a
+  // hexágonos o mapa de calor desde el conmutador del mapa o los Ajustes.
+  vizType: "barrio",
   audience: "ciudadano",
   language: "es",
   // Paleta «Batería» por defecto: sin rojo-peligro. El nivel alto es violeta
@@ -298,7 +300,7 @@ function Hex() { return <svg width="11" height="11" viewBox="0 0 24 24" fill="cu
 function Heat() { return <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6" opacity="0.4" /><circle cx="12" cy="12" r="3" /></svg>; }
 function Bar()  { return <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 8 L9 4 L21 9 L15 19 L3 17 Z" /></svg>; }
 
-function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSelectedZoneId, onSelectBarrio, hour, layers, palette, scale, routeFrom, routeTo, audience, riskByZone }) {
+function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSelectedZoneId, onSelectBarrio, hour, layers, palette, scale, routeFrom, routeTo, routeGeo, routeAlts, audience, riskByZone }) {
   return (
     <div className="pls-mapwrap">
       <MapH3 theme={theme} vizType={vizType}
@@ -315,7 +317,8 @@ function MapArea({ vizType, setVizType, theme, setTheme, selectedZoneId, setSele
         showRios={layers.rios}
         showMio={layers.mio}
         showTaxis={layers.taxis}
-        routeFrom={routeFrom} routeTo={routeTo} />
+        routeFrom={routeFrom} routeTo={routeTo}
+        routeGeo={routeGeo} routeAlts={routeAlts} />
       <div className="pls-map-chrome">
         <div className="pls-mode-toggle">
           <button className={theme === "dark" ? "is-on" : ""} onClick={() => setTheme("dark")}>
@@ -397,6 +400,13 @@ export default function App() {
   const cityVals = Object.values(comunaRisk.byComuna || {});
   const cityScore = cityVals.length ? Math.round(cityVals.reduce((a, b) => a + b, 0) / cityVals.length) : 0;
 
+  // Ruta segura: geometría real (OSRM) + alternativas, puntuadas por el riesgo de
+  // las comunas que atraviesan a la hora actual. Se dibuja en el mapa y se resume
+  // en el panel de rutas.
+  const route = useSafeRoute(routeFrom, routeTo, comunaRisk.byComuna);
+  const routeGeo = route.best?.geometry;
+  const routeAlts = route.routes.filter(r => !r.isBest).map(r => r.geometry);
+
   const currentZone = ZONES.find(z => z.id === selectedZoneId);
   const score = currentZone ? riskOf(currentZone, hour) : cityScore;
 
@@ -410,13 +420,15 @@ export default function App() {
     rail = <Travel onClose={() => setScreen("map")} tourist={t.audience === "tourist"}
       onShowOnMap={(keys) => { setLayers(l => ({ ...l, ...keys })); setScreen("map"); }} />;
   } else if (screen === "routes") {
-    rail = <RoutePlanner onClose={() => setScreen("map")} />;
+    rail = <RoutePlanner from={routeFrom} to={routeTo} setFrom={setRouteFrom} setTo={setRouteTo}
+      route={route} palette={t.palette} tourist={t.audience === "tourist"}
+      onClose={() => setScreen("map")} />;
   } else if (selectedBarrio) {
     rail = <BarrioPanel name={selectedBarrio} onClose={() => setSelectedBarrio(null)} />;
   } else if (selectedZoneId) {
     rail = <ZoneDetail zoneId={selectedZoneId} hour={hour} palette={t.palette} riskOf={riskOf}
         onClose={() => setSelectedZoneId(null)}
-        onRoute={(z) => { setRouteTo(z); setRouteFrom(ZONES.find(zz => zz.id === "granada")); setScreen("routes"); }}
+        onRoute={(z) => { setRouteTo(z); setRouteFrom(f => f || ZONES.find(zz => zz.id === "granada")); setScreen("routes"); }}
         tourist={t.audience === "tourist"} />;
   } else {
     rail = <Trends palette={t.palette} />;
@@ -464,6 +476,7 @@ export default function App() {
             palette={t.palette}
             scale={t.scale}
             routeFrom={routeFrom} routeTo={routeTo}
+            routeGeo={routeGeo} routeAlts={routeAlts}
             audience={t.audience}
             riskByZone={riskByZone}
           />

@@ -7,6 +7,7 @@ import {
 import { COMUNAS } from "../data/comunas.js";
 import { api } from "../lib/api.js";
 import { useApiData } from "../lib/hooks.js";
+import { walkMinutes } from "../lib/routing.js";
 
 // ── Risk chip ───────────────────────────────────────────────────────────
 export function RiskChip({ score, palette }) {
@@ -240,20 +241,150 @@ export function ZoneDetail({ zoneId, hour, palette, onClose, onRoute, tourist, r
 }
 
 // ── Route Planner ───────────────────────────────────────────────────────
-export function RoutePlanner({ onClose }) {
+// Lugares seleccionables: las zonas representativas de todas las comunas, más
+// «Mi ubicación» cuando el navegador la comparte. Ordenados por nombre.
+const ROUTE_PLACES = [...ZONES].sort((a, b) => a.name.localeCompare(b.name, "es"));
+
+function PlaceSelect({ value, onChange, placeholder, allowGeo, tourist }) {
+  const [geo, setGeo] = useState("idle"); // idle | locating | error
+  function useMyLocation() {
+    if (!navigator.geolocation) { setGeo("error"); return; }
+    setGeo("locating");
+    navigator.geolocation.getCurrentPosition(
+      (p) => { setGeo("idle"); onChange({ id: "__me", name: tourist ? "My location" : "Mi ubicación", lat: p.coords.latitude, lon: p.coords.longitude }); },
+      () => setGeo("error"),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  }
+  return (
+    <div className="pls-route-field">
+      <select
+        className="pls-route-select"
+        value={value?.id || ""}
+        onChange={(e) => {
+          const z = ROUTE_PLACES.find(p => p.id === e.target.value);
+          onChange(z ? { id: z.id, name: z.name, lat: z.lat, lon: z.lon } : null);
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {value?.id === "__me" && <option value="__me">{value.name}</option>}
+        {ROUTE_PLACES.map(p => (
+          <option key={p.id} value={p.id}>{p.name} · {p.comuna}</option>
+        ))}
+      </select>
+      {allowGeo && (
+        <button type="button" className="pls-route-geo" onClick={useMyLocation}
+          title={tourist ? "Use my location" : "Usar mi ubicación"}>
+          {geo === "locating" ? "…" : "◎"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function RoutePlanner({ from, to, setFrom, setTo, route, palette, tourist, onClose }) {
+  const t = (es, en) => (tourist ? en : es);
+  const best = route?.best;
+  const alts = (route?.routes || []).filter(r => !r.isBest);
+  const swap = () => { setFrom(to); setTo(from); };
+
   return (
     <aside className="pls-panel pls-panel-route">
       <div className="pls-panel-hd">
-        <div className="pls-panel-eyebrow">Planifica tu trayecto</div>
+        <div className="pls-panel-eyebrow">{t("Planifica tu trayecto", "Plan your trip")}</div>
         <button className="pls-x" onClick={onClose}>✕</button>
       </div>
-      <h2 className="pls-panel-title">Ruta segura</h2>
+      <h2 className="pls-panel-title">{t("Ruta segura", "Safe route")}</h2>
 
-      <div className="pls-empty">
-        <span className="pls-soon-badge">Próximamente</span>
-        <p>Estamos afinando el cálculo de rutas seguras. Esta función estará disponible muy pronto.</p>
-        <p className="pls-foot-mute">Pilas considerará iluminación, presencia policial, reportes recientes y patrón histórico.</p>
+      <div className="pls-section">
+        <div className="pls-route-form">
+          <span className="pls-route-pin is-from">A</span>
+          <PlaceSelect value={from} onChange={setFrom} tourist={tourist} allowGeo
+            placeholder={t("Punto de partida", "Starting point")} />
+          <button type="button" className="pls-route-swap" onClick={swap}
+            title={t("Intercambiar", "Swap")} disabled={!from || !to}>⇅</button>
+          <span className="pls-route-pin is-to">B</span>
+          <PlaceSelect value={to} onChange={setTo} tourist={tourist}
+            placeholder={t("Destino", "Destination")} />
+        </div>
       </div>
+
+      {/* Estados: reposo · calculando · error · resultado */}
+      {(!from || !to) && (
+        <div className="pls-empty">
+          <p>{t("Elige tu punto de partida y tu destino.",
+                "Pick your starting point and destination.")}</p>
+          <p className="pls-foot-mute">
+            {t("Pilas traza la ruta real por las calles y elige la más segura según el nivel de atención de cada zona a esta hora.",
+               "Pilas draws the real street route and picks the safest one by each area's attention level at this hour.")}
+          </p>
+        </div>
+      )}
+
+      {from && to && route?.loading && (
+        <div className="pls-empty"><p>{t("Calculando la ruta más segura…", "Finding the safest route…")}</p></div>
+      )}
+
+      {from && to && !route?.loading && route?.error && (
+        <div className="pls-empty">
+          <p>{t("No se pudo calcular la ruta ahora mismo.", "Couldn't compute the route right now.")}</p>
+          <p className="pls-foot-mute">{t("Se muestra la línea directa en el mapa. Intenta de nuevo en un momento.",
+             "A direct line is shown on the map. Try again in a moment.")}</p>
+        </div>
+      )}
+
+      {best && !route?.loading && (
+        <>
+          <div className="pls-route-summary">
+            <div className="pls-route-metrics">
+              <div className="pls-route-metric">
+                <span className="pls-route-metric-v">{walkMinutes(best.distance)}</span>
+                <span className="pls-route-metric-l">min {t("a pie", "walking")}</span>
+              </div>
+              <div className="pls-route-metric">
+                <span className="pls-route-metric-v">{(best.distance / 1000).toFixed(1)}</span>
+                <span className="pls-route-metric-l">km</span>
+              </div>
+              <div className="pls-route-metric">
+                <RiskChip score={best.risk} palette={palette} />
+                <span className="pls-route-metric-l">{t("nivel de la ruta", "route level")}</span>
+              </div>
+            </div>
+            {alts.length > 0 && (
+              <p className="pls-route-note">
+                {t(`La más segura de ${route.routes.length} rutas posibles`,
+                   `Safest of ${route.routes.length} possible routes`)}
+                {alts.some(a => a.risk > best.risk)
+                  ? t(` · evita ${Math.max(...alts.map(a => a.risk)) - best.risk} puntos de riesgo`,
+                       ` · avoids ${Math.max(...alts.map(a => a.risk)) - best.risk} risk points`)
+                  : ""}
+              </p>
+            )}
+          </div>
+
+          {best.comunas?.length > 0 && (
+            <div className="pls-section">
+              <div className="pls-section-h">{t("Zonas que atraviesa", "Areas it crosses")}</div>
+              <ul className="pls-route-comunas">
+                {best.comunas.filter(c => c.share >= 0.03).map(c => {
+                  const cd = COMUNAS.find(x => x.n === c.comuna);
+                  return (
+                    <li key={c.comuna}>
+                      <span className="pls-route-comuna-name">Comuna {c.comuna}{cd ? ` · ${cd.name}` : ""}</span>
+                      <span className="pls-route-comuna-share">{Math.round(c.share * 100)}%</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          <p className="pls-foot-mute">
+            {t("Trazado real sobre OpenStreetMap (OSRM). El nivel de la ruta pondera el nivel de atención de cada comuna por la distancia recorrida en ella, a la hora seleccionada.",
+               "Real routing over OpenStreetMap (OSRM). The route level weighs each comuna's attention level by the distance traveled within it, at the selected hour.")}
+          </p>
+        </>
+      )}
     </aside>
   );
 }
