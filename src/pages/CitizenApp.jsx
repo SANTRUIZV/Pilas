@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import MapH3 from "../components/MapH3.jsx";
 import { ZONES, CAI, HOSPITALS, REPORTS, METRICS, BARRIOS, normText, riskClass, riskLabel, riskScore } from "../data/data.js";
-import { COMUNAS } from "../data/comunas.js";
 import { ZoneDetail, RoutePlanner, ReportsFeed, Trends, BarrioPanel } from "../components/Panels.jsx";
 import StatsView from "../components/Stats.jsx";
 import Travel from "../components/Travel.jsx";
@@ -124,20 +123,20 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList
       <div className="pls-hd-actions">
         {location && (
           <button className="pls-pill" onClick={onChangeLocation}
-            title={audience === "tourist" ? "Change location" : "Cambiar ubicación"}
+            title={`${locationLabel(location)} · ${audience === "tourist" ? "Change location" : "Cambiar ubicación"}`}
             style={{ cursor: "pointer", color: "var(--pls-fg)", border: "1px solid var(--pls-line)", background: "var(--pls-bg-2)" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 21s-7-5.1-7-11a7 7 0 1 1 14 0c0 5.9-7 11-7 11Z" /><circle cx="12" cy="10" r="2.6" />
             </svg>
-            {locationLabel(location)}
+            {locationLabel(location).split(",")[0]}
           </button>
         )}
         <HeaderSearch barriosList={barriosList} onSelectBarrio={onSelectBarrio} audience={audience} />
         <span className="pls-pill" title={live ? `Backend conectado · fuente: ${status.source}` : "Backend no disponible · datos demo"}>
           <span className="pls-pill-dot" style={live ? null : { background: "var(--pls-fg-faint)", boxShadow: "none", animation: "none" }}></span>
-          {liveLabel} <strong>· {COMUNAS.length} {audience === "tourist" ? "districts" : "comunas"}</strong>
+          {liveLabel}
         </span>
-        <a href="gobierno.html" className="pls-pill" style={{ textDecoration: "none", color: "var(--pls-fg)" }}>
+        <a href="gobierno.html" className="pls-pill pls-pill--gov" style={{ textDecoration: "none", color: "var(--pls-fg)" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
           {audience === "tourist" ? "Government view" : "Vista gobierno"}
         </a>
@@ -148,22 +147,41 @@ function Header({ screen, setScreen, audience, onOpenTweaks, status, barriosList
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
-        <div className="pls-avatar">MA</div>
       </div>
     </header>
   );
 }
 
-function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score, palette, audience, caiCount, scale }) {
-  const labels = audience === "tourist" ? {
-    where: "Where are you", search: "Search neighborhood…", time: "Time of day",
-    layers: "Layers", legend: "Attention level"
+// Capas del mapa como datos: una sola plantilla de fila en vez de 7 bloques
+// repetidos, y el panel entero se pliega para no saturar el sidebar.
+const LAYER_DEFS = [
+  { key: "cai",     mark: "CAI", color: "var(--pls-cool)",   es: "CAI y estaciones",              en: "Police units" },
+  { key: "hosp",    mark: "+",   color: "var(--pls-safe)",   es: "Centros médicos",               en: "Hospitals" },
+  { key: "reports", mark: "!",   color: "var(--pls-accent)", es: "Reportes en vivo",              en: "Live reports" },
+  { key: "sitios",  mark: "★",   color: "var(--pls-warn)",   es: "Sitios turísticos e históricos", en: "Tourist & historic sites" },
+  { key: "rios",    mark: "〰",  color: "var(--pls-cool)",   es: "Ríos de Cali",                  en: "Rivers" },
+  { key: "mio",     mark: "M",   color: "#2E86DE",           es: "MIO y Terminal de buses",       en: "MIO & bus terminal" },
+  { key: "taxis",   mark: "T",   color: "var(--pls-warn)",   es: "Bahías de taxi",                en: "Official taxi bays" },
+];
+
+function Sidebar({ hour, setHour, layers, setLayers, currentZone, score, palette, audience, caiCount, scale }) {
+  const tourist = audience === "tourist";
+  const labels = tourist ? {
+    where: "Where are you", time: "Time of day",
+    layers: "Map layers", legend: "Attention level"
   } : {
-    where: "Estás en", search: "Buscar barrio o sitio…", time: "Hora del día",
+    where: "Estás en", time: "Hora del día",
     layers: "Capas del mapa", legend: "Nivel de atención"
   };
+  // Las capas arrancan plegadas: el sidebar respira y quien las necesita las abre.
+  const [layersOpen, setLayersOpen] = useState(false);
+  const layerCounts = {
+    cai: caiCount, hosp: HOSPITALS.length, reports: REPORTS.length, sitios: SITIOS.length,
+    rios: RIOS.length, mio: MIO_ESTACIONES.length, taxis: TAXI_BAHIAS.length,
+  };
+  const activeLayers = LAYER_DEFS.filter(l => layers[l.key]).length;
   const cls = riskClass(score);
-  const label = audience === "tourist"
+  const label = tourist
     ? ({ low: "Calm", mid: "Stay aware", high: "Stay alert", veryHigh: "High alert" })[cls]
     : riskLabel(score);
 
@@ -209,94 +227,52 @@ function Sidebar({ hour, setHour, layers, setLayers, vizType, currentZone, score
       </div>
 
       <div className="pls-side-section">
-        <div className="pls-side-h">{labels.layers}</div>
-        <div className="pls-layers">
-          <label className="pls-layer">
-            <input type="checkbox" checked={layers.cai} onChange={e => setLayers({ ...layers, cai: e.target.checked })} />
-            <span className="pls-layer-box"></span>
-            <span className="pls-layer-mark" style={{ color: "var(--pls-cool)" }}>CAI</span>
-            <span>{audience === "tourist" ? "Police units" : "CAI y estaciones"}</span>
-            <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{caiCount}</span>
-          </label>
-          <label className="pls-layer">
-            <input type="checkbox" checked={layers.hosp} onChange={e => setLayers({ ...layers, hosp: e.target.checked })} />
-            <span className="pls-layer-box"></span>
-            <span className="pls-layer-mark" style={{ color: "var(--pls-safe)" }}>+</span>
-            <span>{audience === "tourist" ? "Hospitals" : "Centros médicos"}</span>
-            <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{HOSPITALS.length}</span>
-          </label>
-          <label className="pls-layer">
-            <input type="checkbox" checked={layers.reports} onChange={e => setLayers({ ...layers, reports: e.target.checked })} />
-            <span className="pls-layer-box"></span>
-            <span className="pls-layer-mark" style={{ color: "var(--pls-accent)" }}>!</span>
-            <span>{audience === "tourist" ? "Live reports" : "Reportes en vivo"}</span>
-            <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-accent)" }}>{REPORTS.length}</span>
-          </label>
-          <label className="pls-layer">
-            <input type="checkbox" checked={layers.sitios} onChange={e => setLayers({ ...layers, sitios: e.target.checked })} />
-            <span className="pls-layer-box"></span>
-            <span className="pls-layer-mark" style={{ color: "var(--pls-warn)" }}>★</span>
-            <span>{audience === "tourist" ? "Tourist & historic sites" : "Sitios turísticos e históricos"}</span>
-            <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{SITIOS.length}</span>
-          </label>
-          <label className="pls-layer">
-            <input type="checkbox" checked={layers.rios} onChange={e => setLayers({ ...layers, rios: e.target.checked })} />
-            <span className="pls-layer-box"></span>
-            <span className="pls-layer-mark" style={{ color: "var(--pls-cool)" }}>〰</span>
-            <span>{audience === "tourist" ? "Rivers" : "Ríos de Cali"}</span>
-            <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{RIOS.length}</span>
-          </label>
-          <label className="pls-layer">
-            <input type="checkbox" checked={layers.mio} onChange={e => setLayers({ ...layers, mio: e.target.checked })} />
-            <span className="pls-layer-box"></span>
-            <span className="pls-layer-mark" style={{ color: "#2E86DE" }}>M</span>
-            <span>{audience === "tourist" ? "MIO & bus terminal" : "MIO y Terminal de buses"}</span>
-            <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{MIO_ESTACIONES.length}</span>
-          </label>
-          <label className="pls-layer">
-            <input type="checkbox" checked={layers.taxis} onChange={e => setLayers({ ...layers, taxis: e.target.checked })} />
-            <span className="pls-layer-box"></span>
-            <span className="pls-layer-mark" style={{ color: "var(--pls-warn)" }}>T</span>
-            <span>{audience === "tourist" ? "Official taxi bays" : "Bahías de taxi"}</span>
-            <span className="pls-spacer"></span>
-            <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{TAXI_BAHIAS.length}</span>
-          </label>
-        </div>
+        <button type="button" className="pls-side-toggle" onClick={() => setLayersOpen(o => !o)}
+          aria-expanded={layersOpen}>
+          <span>{labels.layers}</span>
+          {activeLayers > 0 && <span className="pls-side-toggle-n">{activeLayers}</span>}
+          <svg className={layersOpen ? "is-open" : ""} width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+            <path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        {layersOpen && (
+          <div className="pls-layers">
+            {LAYER_DEFS.map(l => (
+              <label key={l.key} className="pls-layer">
+                <input type="checkbox" checked={layers[l.key]}
+                  onChange={e => setLayers({ ...layers, [l.key]: e.target.checked })} />
+                <span className="pls-layer-box"></span>
+                <span className="pls-layer-mark" style={{ color: l.color }}>{l.mark}</span>
+                <span>{tourist ? l.en : l.es}</span>
+                <span className="pls-spacer"></span>
+                <span style={{ fontFamily: "var(--pls-mono)", fontSize: 11, color: "var(--pls-fg-faint)" }}>{layerCounts[l.key]}</span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="pls-side-section">
         <div className="pls-side-h">{labels.legend}</div>
-        <div className="pls-legend">
-          {["Tranquilo","Atento","Pilas","Muy pilas"].map((l, i) => (
-            <div key={l} className="pls-legend-row">
-              <div className="pls-legend-sw" style={{ background: palette[i] }}></div>
-              <strong>{audience === "tourist" ? ["Calm","Stay aware","Alert","High alert"][i] : l}</strong>
+        <div className="pls-legend-scale">
+          {(tourist ? ["Calm","Aware","Alert","High alert"] : ["Tranquilo","Atento","Pilas","Muy pilas"]).map((l, i) => (
+            <div key={l} className="pls-legend-cell">
+              <i style={{ background: palette[i] }}></i>
+              <strong>{l}</strong>
               <span>{scale === "relativa"
-                ? (audience === "tourist" ? ["calmest ¼","below avg","above avg","top ¼ now"][i] : ["¼ más tranquilo","medio-bajo","medio-alto","¼ mayor ahora"][i])
+                ? (tourist ? ["low ¼","mid−","mid+","top ¼"][i] : ["¼ bajo","med−","med+","¼ alto"][i])
                 : ["0–24","25–44","45–64","65+"][i]}</span>
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 10.5, color: "var(--pls-fg-faint)", margin: "8px 0 0", lineHeight: 1.45 }}>
-          {audience === "tourist"
-            ? "Levels describe recommended attention by area and time of day — never the people who live there. Computed from aggregated open incident data."
-            : "Los niveles describen la atención recomendada por zona y hora — nunca a las personas que viven allí. Se calculan con datos abiertos de denuncias, agregados por comuna."}
-        </p>
-      </div>
-
-      <div className="pls-side-section">
-        <div className="pls-side-h">{audience === "tourist" ? "About" : "Sobre Pilas"}</div>
-        <p style={{ fontSize: 11.5, color: "var(--pls-fg-mute)", margin: 0, lineHeight: 1.5 }}>
-          {audience === "tourist"
-            ? "Pilas turns open data into preventive insight. Built for the MinTIC contest «Datos al Ecosistema 2026»."
-            : "Pilas convierte datos abiertos en información preventiva. Construido para el concurso «Datos al Ecosistema 2026» del MinTIC."}
-        </p>
+        <details className="pls-side-note">
+          <summary>{tourist ? "How are levels computed?" : "¿Cómo se calculan los niveles?"}</summary>
+          <p>
+            {tourist
+              ? "Levels describe recommended attention by area and time of day — never the people who live there. Computed from aggregated open incident data."
+              : "Los niveles describen la atención recomendada por zona y hora — nunca a las personas que viven allí. Se calculan con datos abiertos de denuncias, agregados por comuna."}
+          </p>
+        </details>
       </div>
     </aside>
   );
@@ -471,15 +447,12 @@ export default function App() {
           <Sidebar
             hour={hour} setHour={setHour}
             layers={layers} setLayers={setLayers}
-            vizType={t.vizType}
             currentZone={currentZone}
             score={score}
             palette={t.palette}
             audience={t.audience}
             caiCount={caiList.length}
             scale={t.scale}
-            barriosList={barriosList}
-            onSelectBarrio={selectBarrio}
           />
           <MapArea
             vizType={t.vizType} setVizType={(v) => setTweak("vizType", v)}
