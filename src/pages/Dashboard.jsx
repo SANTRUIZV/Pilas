@@ -7,6 +7,8 @@ import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "../data/data-
 import { useApiStatus, useApiData } from "../lib/hooks.js";
 import { api } from "../lib/api.js";
 import { useAuth } from "../components/AuthGate.jsx";
+import { listUsers, addUser, removeUser } from "../lib/govUsers.js";
+import { firebaseEnabled } from "../lib/firebase.js";
 
 // Paleta de riesgo del dashboard (verde→rojo), compartida por mapa y charts.
 const GOV_PALETTE = ["#9BD142", "#FFD166", "#FF9B45", "#EF4D4D"];
@@ -45,9 +47,9 @@ const SECTIONS = [
 // ── Header ──────────────────────────────────────────────────────────────
 function GovHeader({ section, setSection, year, setYear, years, status }) {
   const live = status?.online;
-  const { user, signOut } = useAuth();
-  // Iniciales del usuario para el avatar (a partir del correo).
-  const initials = (user?.email || "CL").replace(/@.*/, "").slice(0, 2).toUpperCase();
+  const { user, isMaster, signOut } = useAuth();
+  // La sección «Usuarios» solo existe para la cuenta master.
+  const sections = isMaster ? [...SECTIONS, { id: "usuarios", label: "Usuarios" }] : SECTIONS;
   return (
     <header className="gov-hd">
       <div className="pls-brand">
@@ -67,7 +69,7 @@ function GovHeader({ section, setSection, year, setYear, years, status }) {
       </div>
 
       <nav className="pls-nav gov-nav" aria-label="Secciones del tablero">
-        {SECTIONS.map(s => (
+        {sections.map(s => (
           <button key={s.id} className={section === s.id ? "is-on" : ""} onClick={() => setSection(s.id)}>
             {s.label}
           </button>
@@ -100,7 +102,10 @@ function GovHeader({ section, setSection, year, setYear, years, status }) {
           </svg>
           Salir
         </button>
-        <div className="pls-avatar" style={{ background: "linear-gradient(135deg, #5FB7E6, #2A6FDB)" }} title={user?.email || ""}>{initials}</div>
+        <div className="pls-avatar" style={{ background: "linear-gradient(135deg, #5FB7E6, #2A6FDB)" }}
+          title={`${user?.email || ""}${isMaster ? " · master" : ""}`}>
+          {(user?.email || "CL").replace(/@.*/, "").slice(0, 2).toUpperCase()}
+        </div>
       </div>
     </header>
   );
@@ -745,8 +750,160 @@ function OperationsView() {
   );
 }
 
+// ── Usuarios: alta/baja de acceso (solo cuenta master) ──────────────────
+// Genera una contraseña temporal legible para el alta (el usuario la cambia
+// luego con «¿Olvidaste tu contraseña?» de Firebase, si se habilita).
+function tempPassword() {
+  const s = Math.random().toString(36).slice(2, 8);
+  return `Cali-${s}${Math.floor(10 + Math.random() * 89)}`;
+}
+
+function UsersView() {
+  const { user } = useAuth();
+  const [users, setUsers] = useState(null); // null = cargando
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ email: "", password: tempPassword(), role: "operador" });
+  const [justCreated, setJustCreated] = useState(null); // { email, password } para mostrar la temporal
+
+  const refresh = React.useCallback(() => {
+    setError("");
+    listUsers()
+      .then(setUsers)
+      .catch(() => { setUsers([]); setError("No se pudo cargar la lista. Revisa que Firestore y sus reglas estén configurados."); });
+  }, []);
+
+  React.useEffect(() => { refresh(); }, [refresh]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError(""); setJustCreated(null); setBusy(true);
+    try {
+      const created = await addUser({ email: form.email, password: form.password, role: form.role });
+      setJustCreated({ email: created.email, password: form.password });
+      setForm({ email: "", password: tempPassword(), role: "operador" });
+      refresh();
+    } catch (err) {
+      const map = {
+        "auth/email-already-in-use": "Ya existe una cuenta con ese correo.",
+        "auth/invalid-email": "El correo no es válido.",
+        "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+      };
+      setError(map[err?.code] || "No se pudo crear el usuario. Revisa los permisos de Firestore.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove(u) {
+    if (u.email === user?.email) return;               // no te quites tu propio acceso
+    if (!window.confirm(`¿Revocar el acceso de ${u.email}?`)) return;
+    setError(""); setBusy(true);
+    try {
+      await removeUser(u.uid);
+      refresh();
+    } catch {
+      setError("No se pudo revocar el acceso. Revisa los permisos de Firestore.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!firebaseEnabled) {
+    return (
+      <div className="gov-single gov-users">
+        <div className="gov-users-empty">La gestión de usuarios requiere Firebase configurado.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="gov-single gov-users">
+      <header className="gov-users-hd">
+        <h2>Usuarios del Centro de Mando</h2>
+        <p>Solo la cuenta master otorga y revoca acceso. No hay registro público.</p>
+      </header>
+
+      <div className="gov-users-grid">
+        {/* Alta */}
+        <section className="gov-users-add">
+          <h3>Agregar usuario</h3>
+          <form onSubmit={submit}>
+            {error && <div className="gov-users-msg is-err" role="alert">{error}</div>}
+            {justCreated && (
+              <div className="gov-users-msg is-ok">
+                Usuario <strong>{justCreated.email}</strong> creado. Contraseña temporal:{" "}
+                <code>{justCreated.password}</code> — compártela de forma segura; el usuario debería cambiarla.
+              </div>
+            )}
+            <label className="gov-users-lbl">Correo</label>
+            <input className="gov-users-input" type="email" required autoComplete="off"
+              placeholder="nombre@cali.gov.co" value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+
+            <label className="gov-users-lbl">Contraseña temporal</label>
+            <div className="gov-users-pass">
+              <input className="gov-users-input" type="text" required minLength={6} value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+              <button type="button" className="gov-users-regen" title="Generar otra"
+                onClick={() => setForm(f => ({ ...f, password: tempPassword() }))}>↻</button>
+            </div>
+
+            <label className="gov-users-lbl">Rol</label>
+            <select className="gov-users-input" value={form.role}
+              onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+              <option value="operador">Operador (solo consulta)</option>
+              <option value="master">Master (puede gestionar usuarios)</option>
+            </select>
+
+            <button className="gov-users-cta" type="submit" disabled={busy}>
+              {busy ? "Creando…" : "Crear usuario"}
+            </button>
+          </form>
+        </section>
+
+        {/* Lista */}
+        <section className="gov-users-list-wrap">
+          <div className="gov-users-list-hd">
+            <h3>Con acceso</h3>
+            <span>{users ? `${users.length} usuario${users.length === 1 ? "" : "s"}` : "…"}</span>
+          </div>
+          {users == null ? (
+            <div className="gov-users-empty">Cargando…</div>
+          ) : users.length === 0 ? (
+            <div className="gov-users-empty">Aún no hay usuarios en el allowlist.</div>
+          ) : (
+            <ul className="gov-users-list">
+              {users.map(u => {
+                const self = u.email === user?.email;
+                return (
+                  <li key={u.uid}>
+                    <div className="gov-users-item">
+                      <span className="gov-users-avatar">{(u.email || "?").slice(0, 2).toUpperCase()}</span>
+                      <div className="gov-users-info">
+                        <span className="gov-users-email">{u.email}{self && <em> · tú</em>}</span>
+                        <span className={"gov-users-role is-" + u.role}>{u.role === "master" ? "Master" : "Operador"}</span>
+                      </div>
+                    </div>
+                    <button className="gov-users-remove" disabled={self || busy}
+                      title={self ? "No puedes revocar tu propio acceso" : "Revocar acceso"}
+                      onClick={() => handleRemove(u)}>
+                      Revocar
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
 // ── App ────────────────────────────────────────────────────────────────
 export default function App() {
+  const { isMaster } = useAuth();
   const [section, setSection] = useState("panorama");
   const [period, setPeriod] = useState("90d");
   const [year, setYear] = useState(null);  // null = backend usa el último año completo
@@ -783,6 +940,7 @@ export default function App() {
       {section === "analisis" && <AnalysisView period={period} setPeriod={setPeriod} year={year} />}
       {section === "operacion" && <OperationsView />}
       {section === "briefing" && <div className="gov-single"><GovBriefing year={year} /></div>}
+      {section === "usuarios" && isMaster && <UsersView />}
       <GovFooter />
     </div>
   );

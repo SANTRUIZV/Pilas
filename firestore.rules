@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para el control de acceso del Centro de Mando
+// (Pilas Gobierno). Copia estas reglas en la consola de Firebase →
+// Firestore Database → Reglas, y publícalas.
+//
+// IMPORTANTE: cambia el correo de MASTER_EMAIL por el mismo que configuras en
+// VITE_GOV_MASTER_EMAIL (src/lib/firebase.js). Esa cuenta es la única que puede
+// dar de alta y baja usuarios; el resto solo entra si tiene documento en
+// `gov_users`.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // >>> Cambia este correo por el de tu cuenta master <<<
+    function masterEmail() {
+      return 'santruizv@gmail.com';
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Es master si su correo es el master, o si su documento tiene role == master.
+    function isMaster() {
+      return isSignedIn() && (
+        request.auth.token.email.lower() == masterEmail() ||
+        (
+          exists(/databases/$(database)/documents/gov_users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/gov_users/$(request.auth.uid)).data.role == 'master'
+        )
+      );
+    }
+
+    match /gov_users/{uid} {
+      // Cada usuario puede leer su propio documento (para verificar su acceso);
+      // la master puede leer/listar todos.
+      allow get: if isSignedIn() && (request.auth.uid == uid || isMaster());
+      allow list: if isMaster();
+
+      // La master puede crear/editar/borrar cualquier usuario. Además, la cuenta
+      // master puede crear su propio documento en el primer acceso (bootstrap).
+      allow create: if isMaster() ||
+        (isSignedIn() && request.auth.uid == uid &&
+         request.auth.token.email.lower() == masterEmail());
+      allow update, delete: if isMaster();
+    }
+
+    // Todo lo demás queda cerrado por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

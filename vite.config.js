@@ -15,6 +15,13 @@ export default defineConfig({
         gobierno: resolve(__dirname, "gobierno.html"),
         creadores: resolve(__dirname, "creadores.html"),
       },
+      output: {
+        // Firebase (auth + firestore) en su propio chunk: solo lo carga el
+        // dashboard de gobierno, y se cachea aparte del código de la app.
+        manualChunks: {
+          firebase: ["firebase/app", "firebase/auth", "firebase/firestore"],
+        },
+      },
     },
   },
 });

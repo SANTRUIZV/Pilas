@@ -1,15 +1,20 @@
 // AuthGate — puerta de autenticación del Centro de Mando gubernamental.
 //
-// Envuelve el tablero: si no hay sesión iniciada muestra el formulario de
-// acceso y solo deja pasar tras autenticar. Usa Firebase Authentication
-// (email + contraseña) cuando hay proyecto configurado (VITE_FIREBASE_*); si no,
-// cae a un modo demo local para poder probar el flujo sin backend de auth.
+// Envuelve el tablero: solo deja pasar a usuarios AUTORIZADOS. No hay registro
+// abierto — la cuenta «master» (masterEmail) es la única que da de alta a los
+// demás desde la sección «Usuarios». Tras iniciar sesión con Firebase Auth se
+// comprueba el allowlist (colección gov_users de Firestore, ver govUsers.js): si
+// el correo no está autorizado, se cierra la sesión y se muestra un aviso.
 //
-// Expone `useAuth()` para que el tablero muestre el usuario y el botón de salir.
+// Si no hay proyecto Firebase (VITE_FIREBASE_*), cae a un modo demo local para
+// poder probar el tablero sin backend de auth (sin gestión de usuarios).
+//
+// Expone `useAuth()` con { user, role, isMaster, signOut }.
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { auth, firebaseEnabled } from "../lib/firebase.js";
+import { resolveAccess } from "../lib/govUsers.js";
 
-const AuthContext = createContext({ user: null, signOut: () => {} });
+const AuthContext = createContext({ user: null, role: null, isMaster: false, signOut: () => {} });
 export const useAuth = () => useContext(AuthContext);
 
 const DEMO_KEY = "pls_gov_demo_session";
@@ -84,8 +89,7 @@ function BrandMark() {
   );
 }
 
-function LoginForm({ onDemoSignIn }) {
-  const [mode, setMode] = useState("signin"); // signin | signup
+function LoginForm({ onDemoSignIn, notice }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -97,18 +101,12 @@ function LoginForm({ onDemoSignIn }) {
     setBusy(true);
     try {
       if (firebaseEnabled) {
-        const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import("firebase/auth");
-        if (mode === "signup") {
-          await createUserWithEmailAndPassword(auth, email.trim(), password);
-        } else {
-          await signInWithEmailAndPassword(auth, email.trim(), password);
-        }
-        // onAuthStateChanged en AuthGate detecta la sesión y monta el tablero.
+        const { signInWithEmailAndPassword } = await import("firebase/auth");
+        await signInWithEmailAndPassword(auth, email.trim(), password);
+        // onAuthStateChanged en AuthGate valida el allowlist y monta el tablero.
       } else {
         // Modo demo: sin proyecto Firebase, valida mínimamente y crea sesión local.
-        if (!email.trim() || password.length < 6) {
-          throw { code: mode === "signup" ? "auth/weak-password" : "auth/invalid-credential" };
-        }
+        if (!email.trim() || password.length < 6) throw { code: "auth/invalid-credential" };
         onDemoSignIn({ email: email.trim() });
       }
     } catch (err) {
@@ -134,16 +132,14 @@ function LoginForm({ onDemoSignIn }) {
         </div>
 
         <div className="gauth-org">Secretaría de Seguridad y Justicia</div>
-        <h1 className="gauth-title">
-          {mode === "signup" ? "Crear cuenta de acceso" : "Acceso restringido"}
-        </h1>
+        <h1 className="gauth-title">Acceso restringido</h1>
         <p className="gauth-sub">
-          {mode === "signup"
-            ? "Registra una cuenta para el personal autorizado de la Sala COP."
-            : "Inicia sesión para entrar al tablero operativo. Uso exclusivo del personal autorizado."}
+          Inicia sesión con tu cuenta autorizada. El acceso lo otorga la
+          administración del Centro de Mando; no hay registro público.
         </p>
 
         <form onSubmit={submit}>
+          {notice && <div className="gauth-err" role="alert">{notice}</div>}
           {error && <div className="gauth-err" role="alert">{error}</div>}
 
           <div className="gauth-field">
@@ -156,22 +152,15 @@ function LoginForm({ onDemoSignIn }) {
           <div className="gauth-field">
             <label className="gauth-lbl" htmlFor="gauth-pass">Contraseña</label>
             <input id="gauth-pass" className="gauth-input" type="password"
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              autoComplete="current-password"
               placeholder="••••••••" value={password}
               onChange={e => setPassword(e.target.value)} required minLength={6} />
           </div>
 
           <button className="gauth-cta" type="submit" disabled={busy}>
-            {busy ? "Verificando…" : mode === "signup" ? "Crear cuenta" : "Iniciar sesión"}
+            {busy ? "Verificando…" : "Iniciar sesión"}
           </button>
         </form>
-
-        <p className="gauth-switch">
-          {mode === "signup" ? "¿Ya tienes cuenta?" : "¿Personal nuevo?"}{" "}
-          <button type="button" onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(""); }}>
-            {mode === "signup" ? "Iniciar sesión" : "Crear cuenta"}
-          </button>
-        </p>
 
         {!firebaseEnabled && (
           <p className="gauth-demo">
@@ -189,13 +178,13 @@ function LoginForm({ onDemoSignIn }) {
 }
 
 export default function AuthGate({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);   // { email, uid, role } una vez autorizado
   const [ready, setReady] = useState(!firebaseEnabled); // en demo no hay que esperar a Firebase
+  const [notice, setNotice] = useState("");  // aviso de «no autorizado» en el login
 
-  // Firebase: escucha cambios de sesión (login, logout, refresco de token).
+  // Firebase: escucha cambios de sesión y valida el allowlist tras autenticar.
   useEffect(() => {
     if (!firebaseEnabled) {
-      // Restaura sesión demo previa de este navegador.
       try {
         const raw = sessionStorage.getItem(DEMO_KEY);
         if (raw) setUser(JSON.parse(raw));
@@ -203,13 +192,34 @@ export default function AuthGate({ children }) {
       return;
     }
     let unsub = () => {};
-    import("firebase/auth").then(({ onAuthStateChanged }) => {
-      unsub = onAuthStateChanged(auth, u => {
-        setUser(u ? { email: u.email, uid: u.uid } : null);
-        setReady(true);
+    let alive = true;
+    import("firebase/auth").then(({ onAuthStateChanged, signOut: fbSignOut }) => {
+      unsub = onAuthStateChanged(auth, async (u) => {
+        if (!u) { if (alive) { setUser(null); setReady(true); } return; }
+        // Hay sesión de Firebase: ¿está el correo autorizado?
+        try {
+          const access = await resolveAccess({ uid: u.uid, email: u.email });
+          if (!alive) return;
+          if (access) {
+            setNotice("");
+            setUser(access);
+          } else {
+            // Autenticó pero no está en el allowlist: fuera.
+            setNotice(`La cuenta ${u.email} no está autorizada. Pide acceso al administrador del Centro de Mando.`);
+            await fbSignOut(auth).catch(() => {});
+            setUser(null);
+          }
+        } catch {
+          if (!alive) return;
+          setNotice("No se pudo verificar tu acceso. Revisa la conexión o que Firestore esté configurado.");
+          await fbSignOut(auth).catch(() => {});
+          setUser(null);
+        } finally {
+          if (alive) setReady(true);
+        }
       });
     });
-    return () => unsub();
+    return () => { alive = false; unsub(); };
   }, []);
 
   const signOut = async () => {
@@ -223,16 +233,18 @@ export default function AuthGate({ children }) {
   };
 
   const demoSignIn = (u) => {
-    try { sessionStorage.setItem(DEMO_KEY, JSON.stringify(u)); } catch { /* ignore */ }
-    setUser(u);
+    const demoUser = { ...u, role: "operador" };
+    try { sessionStorage.setItem(DEMO_KEY, JSON.stringify(demoUser)); } catch { /* ignore */ }
+    setUser(demoUser);
   };
 
   if (!ready) return null; // evita parpadeo del login mientras Firebase resuelve la sesión
 
-  if (!user) return <LoginForm onDemoSignIn={demoSignIn} />;
+  if (!user) return <LoginForm onDemoSignIn={demoSignIn} notice={notice} />;
 
+  const isMaster = user.role === "master";
   return (
-    <AuthContext.Provider value={{ user, signOut }}>
+    <AuthContext.Provider value={{ user, role: user.role, isMaster, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -54,10 +54,15 @@ qué hace cada vista y muestra las cifras de las bases reales.
 
 ### Dashboard gubernamental (`gobierno.html`)
 
-- **Acceso con inicio de sesión** (Firebase Authentication · email + contraseña):
-  el Centro de Mando exige autenticarse antes de mostrar el tablero, con opción de
-  cerrar sesión desde la cabecera. Se configura con `VITE_FIREBASE_*` (ver
-  [.env.example](.env.example)); sin proyecto configurado usa un *modo demo* local.
+- **Acceso restringido con cuenta master** (Firebase Authentication · email +
+  contraseña): el Centro de Mando exige autenticarse antes de mostrar el tablero.
+  **No hay registro público** — una **cuenta master** (`VITE_GOV_MASTER_EMAIL`) es
+  la única que da de alta y baja usuarios desde la sección **Usuarios**. El acceso
+  del resto se controla con un *allowlist* en Firestore (colección `gov_users`,
+  con rol `master`/`operador`); revocar a alguien borra su registro y el login lo
+  rechaza. Se configura con `VITE_FIREBASE_*` y `VITE_GOV_MASTER_EMAIL` (ver
+  [.env.example](.env.example)) y las reglas de [firestore.rules](firestore.rules);
+  sin proyecto configurado usa un *modo demo* local.
 - **6 KPIs estratégicos** con sparklines y delta vs. período anterior
   (incidentes 7d, hurto de celular, precisión del modelo, alertas activas,
   patrullas asignadas, tiempo de respuesta).
@@ -138,7 +143,8 @@ src/
   lib/               Integración con el backend
     api.js            Cliente HTTP del backend (FastAPI)
     hooks.js          Hooks: estado de conexión, mapa de riesgo, fetch genérico
-    firebase.js       Inicialización de Firebase Auth (login del gobierno)
+    firebase.js       Inicialización de Firebase (Auth + Firestore · login del gobierno)
+    govUsers.js       Allowlist de acceso: alta/baja de usuarios y cuenta master
   styles/            Sistema de diseño
     styles.css        Tokens, layout y componentes base (compartido)
     landing.css       Estilos de la landing y la página de creadores
