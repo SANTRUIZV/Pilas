@@ -31,26 +31,17 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
   z-index: 10;
 }
 
-.gov-hd-org {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  text-align: center;
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--pls-fg-mute);
-  white-space: nowrap;
-}
-.gov-hd-org strong { color: var(--pls-fg); font-weight: 500; font-size: 10.5px; letter-spacing: 0.14em; }
+/* Navegación por secciones (mismas píldoras que la app ciudadana). */
+.gov-nav { justify-self: center; }
 
 .gov-hd-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .gov-hd-actions .pls-pill { white-space: nowrap; }
 
 @media (max-width: 1180px) {
   .gov-hd { display: flex; flex-wrap: wrap; justify-content: space-between; }
-  .gov-hd-org { display: none; }
+  .gov-nav { order: 3; width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .gov-nav::-webkit-scrollbar { display: none; }
+  .gov-nav button { flex: 1 0 auto; }
 }
 
 .gov-period {
@@ -80,6 +71,17 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
   display: grid;
   grid-template-columns: 1fr 360px;
   gap: 0;
+}
+
+/* Panorama: el mapa ocupa toda la altura disponible del centro (ya no hay
+   series debajo — viven en Análisis), para una lectura de un solo vistazo. */
+.gov-main--panorama { flex: 1; align-items: stretch; }
+.gov-main--panorama .gov-center { min-height: calc(100vh - 240px); }
+.gov-main--panorama .gov-map-block {
+  height: auto;
+  flex: 1;
+  min-height: 480px;
+  border-bottom: 0;
 }
 
 .gov-kpis {
@@ -251,32 +253,19 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
   align-self: start;
 }
 
-.gov-rail-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--pls-line);
-}
-.gov-rail-tabs button {
-  flex: 1;
-  appearance: none;
-  border: 0;
-  background: transparent;
-  padding: 12px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--pls-fg-mute);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  font-family: inherit;
+/* Encabezado del rail (una sola sección: alertas del modelo). */
+.gov-rail-hd {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-.gov-rail-tabs button.is-on {
-  color: var(--pls-fg);
-  border-bottom-color: var(--pls-accent);
+  justify-content: space-between;
+  gap: 8px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--pls-line);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pls-fg-mute);
 }
 .gov-rail-tab-badge {
   background: var(--pls-accent);
@@ -548,6 +537,73 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
   border-bottom-color: var(--pls-accent);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Sección Análisis: una sola barra de pestañas para series, comunas y los
+   dashboards de inteligencia; el selector de período vive junto a las series.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.gov-analysis {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--pls-bg);
+  min-width: 0;
+}
+.gov-tabs--bar {
+  align-items: center;
+  gap: 2px;
+  padding: 0 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gov-tabs--bar::-webkit-scrollbar { display: none; }
+.gov-tabs--bar button { white-space: nowrap; }
+.gov-tabs-spacer { flex: 1; }
+.gov-tabs--bar .gov-period { margin: 6px 0; flex: none; }
+/* Los botones del período heredan las reglas de .gov-tabs al estar dentro de la
+   barra; se re-afirma su propio estilo (píldora, no subrayado de pestaña). */
+.gov-tabs--bar .gov-period button { padding: 5px 10px; border-bottom: 0; font-weight: 400; }
+.gov-tabs--bar .gov-period button.is-on { background: var(--pls-fg); color: var(--pls-bg); }
+.gov-analysis-body { min-width: 0; }
+.gov-analysis .gov-series { min-height: 340px; max-width: 1200px; }
+.gov-analysis .gov-table-wrap { max-width: 1200px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Sección Operación: patrullas · actividad · cuadrantes en columnas.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.gov-ops {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--pls-bg);
+  align-items: start;
+}
+.gov-ops-col {
+  min-width: 0;
+  padding: 18px 20px 26px;
+  border-right: 1px solid var(--pls-line);
+}
+.gov-ops-col:last-child { border-right: 0; }
+.gov-ops-h { margin-bottom: 14px; }
+.gov-ops-h h3 {
+  font-family: var(--pls-display);
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+.gov-ops-h span {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pls-fg-faint);
+  font-weight: 600;
+}
+
+/* Sección Briefing a página completa. */
+.gov-single { flex: 1; background: var(--pls-bg); }
+
 /* Directorio de cuadrantes */
 .gov-cuad { display: flex; flex-direction: column; gap: 10px; }
 .gov-cuad-search {
@@ -604,6 +660,9 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
 @media (max-width: 1100px) {
   .gov-main { grid-template-columns: 1fr 300px; }
   .gov-series { grid-template-columns: 180px 1fr; }
+  .gov-ops { grid-template-columns: 1fr 1fr; }
+  .gov-ops-col:nth-child(2n) { border-right: 0; }
+  .gov-ops-col { border-bottom: 1px solid var(--pls-line); }
 }
 
 /* ── Tablet/móvil: una sola columna. El rail (alertas, patrullas, actividad,
@@ -624,8 +683,12 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
   .gov-kpi:nth-child(2n) { border-right: 0; }
 
   .gov-map-block { height: 380px; }
+  .gov-main--panorama .gov-center { min-height: 0; }
+  .gov-main--panorama .gov-map-block { min-height: 380px; }
   .gov-series { grid-template-columns: 1fr; }
   .gov-series-chart { min-height: 220px; }
+  .gov-ops { grid-template-columns: 1fr; }
+  .gov-ops-col { border-right: 0; }
 }
 
 @media (max-width: 760px) {
@@ -634,9 +697,6 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
   .gov-map-block { height: 320px; }
   .gov-kpi { padding: 12px 14px 14px; }
   .gov-kpi-v { font-size: 26px; }
-  .gov-rail-tabs { overflow-x: auto; scrollbar-width: none; }
-  .gov-rail-tabs::-webkit-scrollbar { display: none; }
-  .gov-rail-tabs button { flex: 1 0 auto; padding: 12px 10px; }
   .gov-series { padding: 14px 14px 18px; }
   .gov-table-wrap { padding: 12px 14px; }
   /* El ticker deja de ser sticky para no comer pantalla en móvil. */
@@ -707,43 +767,6 @@ html:has(.gov-app), body:has(.gov-app), html:has(.gov-app) #root {
 }
 .gov-map-overlay-clear:hover { color: var(--pls-fg); background: var(--pls-bg-3); }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Centro de inteligencia: Briefing · Pronóstico 24h · Perfil del delito
-   ───────────────────────────────────────────────────────────────────────── */
-.gov-intel {
-  grid-column: 1 / -1;
-  border-top: 1px solid var(--pls-line);
-  background: var(--pls-bg);
-}
-.gov-intel-tabs {
-  display: flex;
-  gap: 2px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--pls-line);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.gov-intel-tabs::-webkit-scrollbar { display: none; }
-.gov-intel-tabs button {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--pls-fg-mute);
-  font: inherit;
-  font-size: 13px;
-  white-space: nowrap;
-  padding: 13px 16px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-}
-.gov-intel-tabs button:hover { color: var(--pls-fg); }
-.gov-intel-tabs button.is-on {
-  color: var(--pls-fg);
-  border-bottom-color: var(--pls-accent);
-  font-weight: 600;
-}
-.gov-intel-body { min-width: 0; }
 /* Los dashboards embebidos (Stats.jsx) traen su propio .pls-sv con padding. */
 .gov-intel-sv { width: 100%; }
 

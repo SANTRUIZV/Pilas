@@ -33,8 +33,17 @@ function deltaSign(d) {
   return d > 0 ? "▲" : "▼";
 }
 
+// Secciones del tablero. Cada una agrupa lo que antes estaba disperso en la
+// misma página: así cada pantalla tiene un solo foco y menos ruido.
+const SECTIONS = [
+  { id: "panorama", label: "Panorama" },
+  { id: "analisis", label: "Análisis" },
+  { id: "operacion", label: "Operación" },
+  { id: "briefing", label: "Briefing" },
+];
+
 // ── Header ──────────────────────────────────────────────────────────────
-function GovHeader({ period, setPeriod, year, setYear, years, status }) {
+function GovHeader({ section, setSection, year, setYear, years, status }) {
   const live = status?.online;
   const { user, signOut } = useAuth();
   // Iniciales del usuario para el avatar (a partir del correo).
@@ -57,10 +66,13 @@ function GovHeader({ period, setPeriod, year, setYear, years, status }) {
         </div>
       </div>
 
-      <div className="gov-hd-org">
-        <strong>SECRETARÍA DE SEGURIDAD Y JUSTICIA</strong>
-        <span>Alcaldía de Santiago de Cali · Sala COP</span>
-      </div>
+      <nav className="pls-nav gov-nav" aria-label="Secciones del tablero">
+        {SECTIONS.map(s => (
+          <button key={s.id} className={section === s.id ? "is-on" : ""} onClick={() => setSection(s.id)}>
+            {s.label}
+          </button>
+        ))}
+      </nav>
 
       <div className="gov-hd-actions">
         <span className="pls-pill" title={live ? `Backend conectado · fuente: ${status.source}` : "Backend no disponible · datos demo"}>
@@ -77,11 +89,6 @@ function GovHeader({ period, setPeriod, year, setYear, years, status }) {
             </select>
           </label>
         )}
-        <div className="gov-period" title="Rango de la serie temporal">
-          {["7d","30d","90d","6m","1a"].map(p => (
-            <button key={p} className={period === p ? "is-on" : ""} onClick={() => setPeriod(p)}>{p}</button>
-          ))}
-        </div>
         <a href="ciudadano.html" className="pls-pill" style={{ textDecoration: "none", color: "var(--pls-fg)" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 12h18M13 5l8 7-8 7"/></svg>
           App ciudadano
@@ -550,7 +557,7 @@ function GovFooter() {
         Modelo <code>{trained ? "XGBoost (real)" : m.model}</code>
         {trained ? <> · ROC-AUC <code>{(trained.roc_auc * 100).toFixed(1)}%</code></> : <> · drift PSI <code>0.04</code> (ok)</>}
       </span>
-      <span className="pls-ft-item">Conectado a <strong>Sala COP</strong> · <code>192.168.10.23</code></span>
+      <span className="pls-ft-item"><strong>Secretaría de Seguridad y Justicia</strong> · Sala COP</span>
     </footer>
   );
 }
@@ -649,32 +656,99 @@ function GovBriefing({ year }) {
   );
 }
 
-// ── Centro de inteligencia (briefing · pronóstico 24h · perfil) ─────────
-function GovIntel({ year }) {
-  const [tab, setTab] = useState("brief");
+// ── Panorama: KPIs + mapa operativo + alertas del modelo ────────────────
+// La vista de entrada: lo esencial para leer el estado de la ciudad de un
+// vistazo, sin series ni tablas compitiendo por la atención.
+function PanoramaView({ year, assigned, onAssign, onShowOnMap, focus, onClearFocus, centerRef }) {
+  const { data: alerts } = useApiData(() => api.govAlerts(year), ALERTS, [year]);
   return (
-    <section className="gov-intel">
-      <div className="gov-intel-tabs">
-        <button className={tab === "brief" ? "is-on" : ""} onClick={() => setTab("brief")}>◆ Briefing</button>
-        <button className={tab === "forecast" ? "is-on" : ""} onClick={() => setTab("forecast")}>◈ Pronóstico 24h</button>
-        <button className={tab === "profile" ? "is-on" : ""} onClick={() => setTab("profile")}>▤ Perfil del delito</button>
-        <button className={tab === "violence" ? "is-on" : ""} onClick={() => setTab("violence")}>⚑ Violencia de género</button>
+    <div className="gov-main gov-main--panorama">
+      <KPIRow year={year} />
+      <div className="gov-center" ref={centerRef}>
+        <GovMap year={year} focusZoneId={focus?.zoneId} focusLabel={focus?.label}
+          onClearFocus={onClearFocus} />
       </div>
-      <div className="gov-intel-body">
-        {tab === "brief" && <GovBriefing year={year} />}
+      <div className="gov-rail">
+        <div className="gov-rail-hd">
+          <span>Alertas del modelo</span>
+          <span className="gov-rail-tab-badge">{alerts.length}</span>
+        </div>
+        <div className="gov-rail-body">
+          <AlertsList year={year} assigned={assigned} onAssign={onAssign} onShowOnMap={onShowOnMap} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Análisis: series, comunas y dashboards de inteligencia ──────────────
+// Unifica en un solo juego de pestañas lo que antes estaba repartido entre el
+// centro (series/comunas) y el bloque de inteligencia (pronóstico/perfil/VG).
+function AnalysisView({ period, setPeriod, year }) {
+  const [tab, setTab] = useState("series");
+  const TABS = [
+    { id: "series",   label: "Series por delito" },
+    { id: "comunas",  label: "Comunas" },
+    { id: "forecast", label: "Pronóstico 24h" },
+    { id: "profile",  label: "Perfil del delito" },
+    { id: "violence", label: "Violencia de género" },
+  ];
+  return (
+    <div className="gov-analysis">
+      <div className="gov-tabs gov-tabs--bar">
+        {TABS.map(tb => (
+          <button key={tb.id} className={tab === tb.id ? "is-on" : ""} onClick={() => setTab(tb.id)}>
+            {tb.label}
+          </button>
+        ))}
+        <span className="gov-tabs-spacer" />
+        {tab === "series" && (
+          <div className="gov-period" title="Rango de la serie temporal">
+            {["7d","30d","90d","6m","1a"].map(p => (
+              <button key={p} className={period === p ? "is-on" : ""} onClick={() => setPeriod(p)}>{p}</button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="gov-analysis-body">
+        {tab === "series"   && <SeriesBlock period={period} year={year} />}
+        {tab === "comunas"  && <ComunaTable year={year} />}
         {tab === "forecast" && <div className="pls-sv gov-intel-sv"><ForecastDash palette={GOV_PALETTE} /></div>}
-        {tab === "profile" && <div className="pls-sv gov-intel-sv"><HistoricalDash palette={GOV_PALETTE} /></div>}
+        {tab === "profile"  && <div className="pls-sv gov-intel-sv"><HistoricalDash palette={GOV_PALETTE} /></div>}
         {tab === "violence" && <div className="pls-sv gov-intel-sv"><ViolenceDash palette={GOV_PALETTE} /></div>}
       </div>
-    </section>
+    </div>
+  );
+}
+
+// ── Operación: patrullas · actividad · cuadrantes ───────────────────────
+// Los recursos operativos en columnas paralelas, cada una con su encabezado,
+// en lugar de esconderlos en pestañas del rail.
+function OperationsView() {
+  const cols = [
+    { h: "Patrullas sugeridas", sub: "Actual → recomendado por CAI", body: <PatrolsList /> },
+    { h: "Actividad en vivo",   sub: "Alertas, reportes y sincronizaciones", body: <FeedList /> },
+    { h: "Cuadrantes",          sub: "Directorio con teléfono directo", body: <CuadrantesList /> },
+  ];
+  return (
+    <div className="gov-ops">
+      {cols.map(c => (
+        <section key={c.h} className="gov-ops-col">
+          <header className="gov-ops-h">
+            <h3>{c.h}</h3>
+            <span>{c.sub}</span>
+          </header>
+          {c.body}
+        </section>
+      ))}
+    </div>
   );
 }
 
 // ── App ────────────────────────────────────────────────────────────────
 export default function App() {
+  const [section, setSection] = useState("panorama");
   const [period, setPeriod] = useState("90d");
-  const [tab, setTab] = useState("series");
-  const [railTab, setRailTab] = useState("alerts");
   const [year, setYear] = useState(null);  // null = backend usa el último año completo
   const [assigned, setAssigned] = useState(() => new Set()); // alertas con patrulla asignada
   const [focus, setFocus] = useState(null); // { zoneId, label } para enfocar el mapa
@@ -699,41 +773,16 @@ export default function App() {
 
   return (
     <div className="pls-app gov-app">
-      <GovHeader period={period} setPeriod={setPeriod}
+      <GovHeader section={section} setSection={setSection}
         year={year} setYear={setYear} years={years} status={status} />
-      <div className="gov-main">
-        <KPIRow year={year} />
-
-        <div className="gov-center" ref={centerRef}>
-          <GovMap year={year} focusZoneId={focus?.zoneId} focusLabel={focus?.label}
-            onClearFocus={() => setFocus(null)} />
-          <div>
-            <div className="gov-tabs">
-              <button className={tab === "series" ? "is-on" : ""} onClick={() => setTab("series")}>Series por delito</button>
-              <button className={tab === "comunas" ? "is-on" : ""} onClick={() => setTab("comunas")}>Comunas</button>
-            </div>
-            {tab === "series" ? <SeriesBlock period={period} year={year} /> : <ComunaTable year={year} />}
-          </div>
-        </div>
-
-        <div className="gov-rail">
-          <div className="gov-rail-tabs">
-            <button className={railTab === "alerts" ? "is-on" : ""} onClick={() => setRailTab("alerts")}>Alertas</button>
-            <button className={railTab === "patrols" ? "is-on" : ""} onClick={() => setRailTab("patrols")}>Patrullas</button>
-            <button className={railTab === "feed" ? "is-on" : ""} onClick={() => setRailTab("feed")}>Actividad</button>
-            <button className={railTab === "cuad" ? "is-on" : ""} onClick={() => setRailTab("cuad")}>Cuadrantes</button>
-          </div>
-          <div className="gov-rail-body">
-            {railTab === "alerts"  && <AlertsList year={year} assigned={assigned}
-                                        onAssign={handleAssign} onShowOnMap={handleShowOnMap} />}
-            {railTab === "patrols" && <PatrolsList />}
-            {railTab === "feed"    && <FeedList />}
-            {railTab === "cuad"    && <CuadrantesList />}
-          </div>
-        </div>
-
-        <GovIntel year={year} />
-      </div>
+      {section === "panorama" && (
+        <PanoramaView year={year} assigned={assigned} onAssign={handleAssign}
+          onShowOnMap={handleShowOnMap} focus={focus}
+          onClearFocus={() => setFocus(null)} centerRef={centerRef} />
+      )}
+      {section === "analisis" && <AnalysisView period={period} setPeriod={setPeriod} year={year} />}
+      {section === "operacion" && <OperationsView />}
+      {section === "briefing" && <div className="gov-single"><GovBriefing year={year} /></div>}
       <GovFooter />
     </div>
   );
