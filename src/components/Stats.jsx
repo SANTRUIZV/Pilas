@@ -2,6 +2,7 @@
 // la base real de la Alcaldía 2010–2026 (endpoint /stats, con fallback demo).
 import React, { useMemo, useState } from "react";
 import { STATS_FALLBACK, VIOLENCE_FALLBACK, HOURS, riskClass, CAI, HOSPITALS } from "../data/data.js";
+import { forecastVif, backtest } from "../lib/vifForecast.js";
 import { VIF_MONTHLY, CUADRANTES_TOTAL, CUADRANTES_POR_ESTACION } from "../data/stats-bases.js";
 import { COMUNAS } from "../data/comunas.js";
 import { api } from "../lib/api.js";
@@ -322,6 +323,41 @@ function DashHead({ eyebrow, title, lead, pill, live = true }) {
   );
 }
 
+// ── Proyección: histórico reciente + pronóstico con banda ~80 % ────────────
+function ForecastChart({ hist, fc }) {
+  const W = 720, H = 200, PAD = { l: 36, r: 14, t: 14, b: 26 };
+  const all = hist.concat(fc);
+  const n = all.length;
+  const max = Math.max(...hist.map((h) => h.mean), ...fc.map((f) => f.hi)) * 1.05;
+  const xs = (i) => PAD.l + (i / (n - 1)) * (W - PAD.l - PAD.r);
+  const ys = (v) => PAD.t + (1 - v / max) * (H - PAD.t - PAD.b);
+  const h0 = hist.length;
+  const histLine = hist.map((h, i) => `${xs(i)} ${ys(h.mean)}`).join(" L ");
+  const fcLine = [hist[h0 - 1], ...fc].map((f, i) => `${xs(h0 - 1 + i)} ${ys(f.mean)}`).join(" L ");
+  const band = fc.map((f, i) => `${xs(h0 + i)} ${ys(f.hi)}`).join(" L ") + " L " +
+    fc.map((f, i) => `${xs(h0 + fc.length - 1 - i)} ${ys(fc[fc.length - 1 - i].lo)}`).join(" L ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="pls-sv-trend" preserveAspectRatio="xMidYMid meet">
+      {[0, 0.5, 1].map((p, i) => {
+        const y = PAD.t + p * (H - PAD.t - PAD.b);
+        return (
+          <g key={i}>
+            <line x1={PAD.l} x2={W - PAD.r} y1={y} y2={y} stroke="var(--pls-line)" strokeWidth="0.8" />
+            <text x={PAD.l - 6} y={y + 3} textAnchor="end" className="pls-sv-axis">{nfmt(max * (1 - p))}</text>
+          </g>
+        );
+      })}
+      <line x1={xs(h0 - 1)} x2={xs(h0 - 1)} y1={PAD.t} y2={H - PAD.b} stroke="var(--pls-line)" strokeDasharray="3 3" />
+      <path d={`M ${band} Z`} fill="var(--pls-accent)" opacity="0.16" />
+      <path d={`M ${histLine}`} fill="none" stroke="var(--pls-fg-mute)" strokeWidth="2" strokeLinejoin="round" />
+      <path d={`M ${fcLine}`} fill="none" stroke="var(--pls-accent)" strokeWidth="2.2" strokeDasharray="5 3" strokeLinejoin="round" />
+      {all.map((p, i) => (i % 3 === 0 || i === n - 1) && (
+        <text key={i} x={xs(i)} y={H - 8} textAnchor="middle" className="pls-sv-axis">{MES[p.month - 1]} {String(p.year).slice(2)}</text>
+      ))}
+    </svg>
+  );
+}
+
 // ── Violencia intrafamiliar (MinDefensa · serie mensual Cali 2006–2026) ────
 export function VifDash({ palette }) {
   const { data: v } = useApiData(api.violence, VIOLENCE_FALLBACK, []);
@@ -349,10 +385,15 @@ export function VifDash({ palette }) {
     const last36 = VIF_MONTHLY.slice(-36);
     const last12 = VIF_MONTHLY.slice(-12).reduce((s, r) => s + r[2], 0);
     const first = byYear[2015];
+    const fcast = forecastVif(VIF_MONTHLY);
+    const bt = backtest(VIF_MONTHLY);
+    const fcTotal = fcast.points.reduce((a, p) => a + p.mean, 0);
+    const fcPeak = fcast.points.reduce((a, p) => (p.mean > a.mean ? p : a), fcast.points[0]);
     return {
       byYear, years, total, lastY, lastM, lastFull, delta, peak, ytdA: ytd(lastY), ytdB: ytd(lastY - 1), ytdDelta,
       season, seasonPeak: season.indexOf(Math.max(...season)), seasonLow: season.indexOf(Math.min(...season)),
       base, last36, last12, growth: (byYear[lastFull] - first) / first * 100,
+      fc: fcast.points, bt, fcTotal, fcLast12: last12, fcPeak,
       top: [...fullYears].sort((a, b) => byYear[b] - byYear[a]).slice(0, 6),
     };
   }, []);
@@ -381,6 +422,23 @@ export function VifDash({ palette }) {
       </div>
 
       <div className="pls-sv-grid">
+        <Card title="Proyección · próximos 12 meses" sub="Modelo estacional · banda de confianza ~80 %" span>
+          <ForecastChart
+            hist={m.last36.slice(-18).map((r) => ({ year: r[0], month: r[1], mean: r[2] }))}
+            fc={m.fc} />
+          <div className="pls-sv-kpis" style={{ marginTop: 12 }}>
+            <Kpi value={`~${nfmt(m.fcTotal)}`} label={`Casos esperados ${MES[m.fc[0].month - 1]} ${String(m.fc[0].year).slice(2)} – ${MES[m.fc[11].month - 1]} ${String(m.fc[11].year).slice(2)}`} accent />
+            <Kpi value={arrow((m.fcTotal - m.last12) / m.last12 * 100)} label="vs. últimos 12 meses" />
+            <Kpi value={`${MES_LARGO[m.fcPeak.month - 1]} ${m.fcPeak.year}`} label={`Pico previsto (~${nfmt(m.fcPeak.mean)} casos)`} />
+            <Kpi value={`±${m.bt.mape.toFixed(0)}%`} label="Error medio en prueba (últimos 12 meses)" />
+          </div>
+          <p className="pls-sv-note">
+            Estimación estadística (tendencia + estacionalidad mensual sobre los últimos 4 años), no un conteo
+            observado. En la prueba retrospectiva su error mensual fue de {m.bt.mape.toFixed(0)}%, similar al de repetir
+            el mismo mes del año anterior ({m.bt.mapeNaive.toFixed(0)}%): sirve para dimensionar la demanda, no para anticipar un mes exacto.
+          </p>
+        </Card>
+
         <Card title="Casos por año" sub={`2006–${m.lastY} · ${m.lastY} parcial`} span>
           <YearTrend data={m.years} />
           <p className="pls-sv-note">
