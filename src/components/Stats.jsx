@@ -578,7 +578,7 @@ export function SaludDash() {
             {shown.map((h, i) => (
               <li key={i}>
                 <span className="pls-sv-bar-top">
-                  <span className="pls-sv-bar-l">{h.name}<small> {h.address}</small></span>
+                  <span className="pls-sv-bar-l">{h.name}<small className="pls-sv-addr"> {h.address}</small></span>
                   <span className="pls-sv-bar-v">{h.phone || "—"}</span>
                 </span>
               </li>
