@@ -1542,6 +1542,8 @@ button { font-family: inherit; color: inherit; }
 
 /* Pestañas Histórico / Previsto */
 .pls-sv-tabs {
+  flex-wrap: wrap;
+  max-width: 100%;
   display: inline-flex;
   gap: 4px;
   padding: 4px;
@@ -1821,3 +1823,6 @@ button { font-family: inherit; color: inherit; }
   .pls-sv-victim { grid-template-columns: 1fr; }
   .pls-sv-head { flex-direction: column; }
 }
+
+/* Mapa base oscuro a partir de tiles OSM */
+.tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6); }

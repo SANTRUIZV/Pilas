@@ -1,7 +1,8 @@
 // Pilas — Vista de Estadísticas (app ciudadana). Dashboard de hurtos derivado de
 // la base real de la Alcaldía 2010–2026 (endpoint /stats, con fallback demo).
 import React, { useMemo, useState } from "react";
-import { STATS_FALLBACK, VIOLENCE_FALLBACK, HOURS, riskClass } from "../data/data.js";
+import { STATS_FALLBACK, VIOLENCE_FALLBACK, HOURS, riskClass, CAI, HOSPITALS } from "../data/data.js";
+import { VIF_MONTHLY, CUADRANTES_TOTAL, CUADRANTES_POR_ESTACION } from "../data/stats-bases.js";
 import { COMUNAS } from "../data/comunas.js";
 import { api } from "../lib/api.js";
 import { useApiData } from "../lib/hooks.js";
@@ -294,13 +295,255 @@ export function HistoricalDash({ palette }) {
   );
 }
 
-// ── Violence dashboard (violencia de género e intrafamiliar) ──────────────
+const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const MES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+// % de agresores del entorno cercano (pareja, ex-pareja, otro familiar) sobre los que tienen dato.
+function pctAgresorConocido(agresor = []) {
+  const known = agresor.filter((a) => a.label !== "Sin dato").reduce((s, a) => s + a.count, 0);
+  const near = agresor.filter((a) => ["Pareja", "Ex-pareja", "Otro familiar"].includes(a.label)).reduce((s, a) => s + a.count, 0);
+  return known ? Math.round((near / known) * 100) : "—";
+}
+
+// Cabecera común de las pestañas de cada base.
+function DashHead({ eyebrow, title, lead, pill, live = true }) {
+  return (
+    <header className="pls-sv-head">
+      <div>
+        <div className="pls-sv-eyebrow">{eyebrow}</div>
+        <h1 className="pls-sv-title">{title}</h1>
+        <p className="pls-sv-lead">{lead}</p>
+      </div>
+      <span className="pls-sv-pill">
+        <span className="pls-sv-pill-dot" style={live ? null : { background: "var(--pls-fg-faint)", animation: "none", boxShadow: "none" }}></span>
+        {pill}
+      </span>
+    </header>
+  );
+}
+
+// ── Violencia intrafamiliar (MinDefensa · serie mensual Cali 2006–2026) ────
+export function VifDash({ palette }) {
+  const { data: v } = useApiData(api.violence, VIOLENCE_FALLBACK, []);
+  const gv = (v && v.gv?.total ? v : VIOLENCE_FALLBACK).gv;
+
+  const m = useMemo(() => {
+    const byYear = {};
+    VIF_MONTHLY.forEach(([y, , n]) => { byYear[y] = (byYear[y] || 0) + n; });
+    const [lastY, lastM] = VIF_MONTHLY[VIF_MONTHLY.length - 1];
+    const fullYears = Object.keys(byYear).map(Number).filter((y) => y < lastY);
+    const years = fullYears.concat(lastY).map((y) => ({ year: y, count: byYear[y] }));
+    const total = years.reduce((s, y) => s + y.count, 0);
+    const lastFull = fullYears[fullYears.length - 1];
+    const delta = (byYear[lastFull] - byYear[lastFull - 1]) / byYear[lastFull - 1] * 100;
+    const peak = fullYears.reduce((a, y) => (byYear[y] > byYear[a] ? y : a), fullYears[0]);
+    // acumulado del año en curso vs. mismo periodo del año anterior
+    const ytd = (y) => VIF_MONTHLY.filter(([yy, mm]) => yy === y && mm <= lastM).reduce((s, r) => s + r[2], 0);
+    const ytdDelta = (ytd(lastY) - ytd(lastY - 1)) / ytd(lastY - 1) * 100;
+    // estacionalidad: promedio mensual de los últimos 10 años completos
+    const base = fullYears.slice(-10);
+    const season = MES.map((_, i) => {
+      const vals = VIF_MONTHLY.filter(([y, mm]) => mm === i + 1 && base.includes(y)).map((r) => r[2]);
+      return vals.reduce((s, x) => s + x, 0) / (vals.length || 1);
+    });
+    const last36 = VIF_MONTHLY.slice(-36);
+    const last12 = VIF_MONTHLY.slice(-12).reduce((s, r) => s + r[2], 0);
+    const first = byYear[2015];
+    return {
+      byYear, years, total, lastY, lastM, lastFull, delta, peak, ytdA: ytd(lastY), ytdB: ytd(lastY - 1), ytdDelta,
+      season, seasonPeak: season.indexOf(Math.max(...season)), seasonLow: season.indexOf(Math.min(...season)),
+      base, last36, last12, growth: (byYear[lastFull] - first) / first * 100,
+      top: [...fullYears].sort((a, b) => byYear[b] - byYear[a]).slice(0, 6),
+    };
+  }, []);
+
+  const arrow = (x) => `${x > 0 ? "▲" : "▼"} ${Math.abs(x).toFixed(1)}%`;
+  const comunaItems = (gv.byComuna || []).slice(0, 6).map((c) => ({
+    chip: "C" + c.comuna, label: comunaName(c.comuna), value: c.count,
+    color: heatColor(c.count, gv.byComuna[0].count, palette),
+  }));
+  const agresorItems = (gv.agresor || []).filter((a) => a.label !== "Sin dato")
+    .map((a, i) => ({ label: a.label, value: a.count, color: CAT[(i + 4) % CAT.length] }));
+  const mujeres = (gv.sexo || []).find((s) => s.label === "Mujer")?.count || 0;
+  const sexoTot = (gv.sexo || []).reduce((s, x) => s + x.count, 0);
+
+  return (
+    <>
+      <DashHead eyebrow="Histórico · Violencia intrafamiliar" title="Violencia intrafamiliar en Cali"
+        lead={`${nfmt(m.total)} casos · 2006–${m.lastY} (hasta ${MES_LARGO[m.lastM - 1]}) · serie mensual MinDefensa`}
+        pill="Base MinDefensa · Cali" />
+
+      <div className="pls-sv-kpis">
+        <Kpi value={nfmt(m.byYear[m.lastFull])} label={`Casos en ${m.lastFull} (${arrow(m.delta)} vs ${m.lastFull - 1})`} accent />
+        <Kpi value={nfmt(m.ytdA)} label={`Ene–${MES[m.lastM - 1]} ${m.lastY} (${arrow(m.ytdDelta)} vs ${m.lastY - 1})`} />
+        <Kpi value={`~${Math.round(m.last12 / 12)}/mes`} label="Promedio últimos 12 meses" />
+        <Kpi value={(m.growth > 0 ? "+" : "") + Math.round(m.growth) + "%"} label={`Crecimiento 2015 → ${m.lastFull}`} />
+      </div>
+
+      <div className="pls-sv-grid">
+        <Card title="Casos por año" sub={`2006–${m.lastY} · ${m.lastY} parcial`} span>
+          <YearTrend data={m.years} />
+          <p className="pls-sv-note">
+            Pico histórico en {m.peak} ({nfmt(m.byYear[m.peak])} casos). La caída de 2020 coincide con el
+            confinamiento por COVID-19 y el subregistro; desde 2021 la serie se mantiene por encima de 3.000 casos al año.
+          </p>
+        </Card>
+
+        <Card title="Últimos 36 meses" sub="Casos por mes" span>
+          <Columns values={m.last36.map((r) => r[2])}
+            labels={m.last36.map((r) => `${MES[r[1] - 1]} ${String(r[0]).slice(2)}`)}
+            labelEvery={3} unit="casos" color="var(--pls-accent)" />
+        </Card>
+
+        <Card title="¿En qué meses aumenta?" sub={`Promedio mensual ${m.base[0]}–${m.base[m.base.length - 1]}`}>
+          <Columns values={m.season.map(Math.round)} labels={MES} highlight={m.seasonPeak} unit="casos" color="var(--pls-warn)" />
+          <p className="pls-sv-note">
+            Mayor demanda en {MES_LARGO[m.seasonPeak]} (~{Math.round(m.season[m.seasonPeak])} casos) y menor en {MES_LARGO[m.seasonLow]} (~{Math.round(m.season[m.seasonLow])}).
+          </p>
+        </Card>
+
+        <Card title="Años con más casos" sub="Años completos">
+          <BarList items={m.top.map((y) => ({ label: String(y), value: m.byYear[y], color: heatColor(m.byYear[y], m.byYear[m.top[0]], palette) }))} />
+        </Card>
+
+        <Card title="¿Dónde se concentra?" sub="Violencia de género por comuna · referencia territorial">
+          <BarList items={comunaItems} />
+          <p className="pls-sv-note">
+            La base de MinDefensa no trae comuna; el territorio se aproxima con la base de violencia de género de la Alcaldía.
+          </p>
+        </Card>
+
+        <Card title="¿Quién agrede?" sub="Relación con la víctima · violencia de género 2019–2020">
+          <BarList items={agresorItems} />
+          <p className="pls-sv-note">
+            {sexoTot ? Math.round((mujeres / sexoTot) * 100) : "—"}% de las víctimas de violencia de género son mujeres; {pctAgresorConocido(gv.agresor)}% de
+            los agresores son pareja, ex-pareja u otro familiar.
+          </p>
+        </Card>
+
+        <Card title="Rutas de atención" sub="Líneas oficiales en Colombia" span>
+          <ul className="pls-sv-bars">
+            {[
+              ["155", "Línea Púrpura / orientación a mujeres víctimas de violencia"],
+              ["123", "Línea de emergencias · Policía"],
+              ["122", "Fiscalía · denuncia"],
+              ["141", "ICBF · niñas, niños y adolescentes"],
+            ].map(([n, t]) => (
+              <li key={n}><span className="pls-sv-bar-top"><span className="pls-sv-bar-l"><span className="pls-sv-chip">{n}</span>{t}</span></span></li>
+            ))}
+          </ul>
+          <p className="pls-sv-note">También en las Comisarías de Familia de cada comuna y en las URI/hospitales de la pestaña Salud.</p>
+        </Card>
+      </div>
+
+      <footer className="pls-sv-foot">
+        Fuente: Ministerio de Defensa — violencia intrafamiliar, corte Santiago de Cali (datos.gov.co), {m.lastY} hasta {MES_LARGO[m.lastM - 1]}.
+        Son casos registrados por la Policía, no incluyen hechos sin denuncia. Pilas solo usa conteos agregados.
+      </footer>
+    </>
+  );
+}
+
+// ── Policía (CAI, estaciones y cuadrantes) ─────────────────────────────────
+export function PoliciaDash({ palette }) {
+  const { data: cai } = useApiData(api.cai, CAI, []);
+  const list = Array.isArray(cai) && cai.length ? cai : CAI;
+  const kinds = useMemo(() => {
+    const c = {};
+    list.forEach((u) => { const k = u.kind || "CAI"; c[k] = (c[k] || 0) + 1; });
+    return Object.entries(c).map(([label, value], i) => ({ label, value, color: CAT[i % CAT.length] }));
+  }, [list]);
+  const nCai = kinds.find((k) => k.label === "CAI")?.value || 0;
+  const estItems = CUADRANTES_POR_ESTACION.slice(0, 10).map((e) => ({
+    label: e.name, value: e.count, color: "var(--pls-cool)",
+  }));
+  const conTel = list.filter((u) => u.phone).length;
+
+  return (
+    <>
+      <DashHead eyebrow="Despliegue · Policía Metropolitana de Cali" title="Presencia policial"
+        lead={`${nfmt(list.length)} unidades · ${nfmt(CUADRANTES_TOTAL)} cuadrantes con línea directa`}
+        pill="Base Policía · Cali" />
+
+      <div className="pls-sv-kpis">
+        <Kpi value={nfmt(list.length)} label="Unidades (CAI y estaciones)" accent />
+        <Kpi value={nfmt(nCai)} label="CAI" />
+        <Kpi value={nfmt(CUADRANTES_TOTAL)} label="Cuadrantes" />
+        <Kpi value={nfmt(CUADRANTES_POR_ESTACION.length)} label="Estaciones con cuadrantes" />
+      </div>
+
+      <div className="pls-sv-grid">
+        <Card title="Tipo de unidad" sub="Ubicadas con coordenadas">
+          <Donut items={kinds} centerTop={nfmt(list.length)} centerBottom="unidades" />
+          <p className="pls-sv-note">{nfmt(conTel)} de {nfmt(list.length)} unidades con teléfono de contacto verificado.</p>
+        </Card>
+
+        <Card title="Estaciones con más cuadrantes" sub="Top 10">
+          <BarList items={estItems} />
+        </Card>
+      </div>
+
+      <footer className="pls-sv-foot">
+        Fuente: Policía Metropolitana de Cali — ubicación y teléfonos de CAI, estaciones y cuadrantes.
+        Los cuadrantes no tienen coordenadas en la base; se cuentan por estación.
+      </footer>
+    </>
+  );
+}
+
+// ── Salud (prestadores con urgencias) ──────────────────────────────────────
+export function SaludDash() {
+  const { data: hosp } = useApiData(api.hospitals, HOSPITALS, []);
+  const list = Array.isArray(hosp) && hosp.length ? hosp : HOSPITALS;
+  const conTel = list.filter((h) => h.phone).length;
+  const [q, setQ] = useState("");
+  const shown = list.filter((h) => (h.name + " " + (h.address || "")).toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <>
+      <DashHead eyebrow="Red de atención · Secretaría de Salud (REPS)" title="Servicios de salud con urgencias"
+        lead={`${nfmt(list.length)} prestadores habilitados y geolocalizados en Cali`}
+        pill="Base REPS · Cali" />
+
+      <div className="pls-sv-kpis">
+        <Kpi value={nfmt(list.length)} label="Prestadores con urgencias" accent />
+        <Kpi value={nfmt(conTel)} label="Con teléfono registrado" />
+        <Kpi value="24/7" label="Atención de urgencias" />
+        <Kpi value="123" label="Línea de emergencias" />
+      </div>
+
+      <div className="pls-sv-grid">
+        <Card title="Directorio de prestadores" sub={`${nfmt(shown.length)} de ${nfmt(list.length)}`} span>
+          <input className="pls-sv-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre o dirección…"
+            style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", marginBottom: 10, borderRadius: 10, border: "1px solid var(--pls-line)", background: "var(--pls-bg-2)", color: "var(--pls-fg)", font: "inherit", fontSize: 13 }} />
+          <ul className="pls-sv-bars" style={{ maxHeight: 360, overflowY: "auto" }}>
+            {shown.map((h, i) => (
+              <li key={i}>
+                <span className="pls-sv-bar-top">
+                  <span className="pls-sv-bar-l">{h.name}<small> {h.address}</small></span>
+                  <span className="pls-sv-bar-v">{h.phone || "—"}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+
+      <footer className="pls-sv-foot">
+        Fuente: Registro Especial de Prestadores de Servicios de Salud (REPS) · Secretaría de Salud de Cali.
+        Útil para rutas de atención a víctimas de violencia (valoración médica y activación de protocolos).
+      </footer>
+    </>
+  );
+}
+
+// ── Violence dashboard (violencia de género) ───────────────────────────────
 export function ViolenceDash({ palette }) {
   const { data: v, live } = useApiData(api.violence, VIOLENCE_FALLBACK, []);
   // Si el backend responde {} (base no ingestada), usar el fallback.
   const d = v && v.gv?.total ? v : VIOLENCE_FALLBACK;
   const online = live && v && v.gv?.total;
-  const gv = d.gv, vif = d.vif, hl = d.highlights || {};
+  const gv = d.gv, hl = d.highlights || {};
 
   const comunaItems = useMemo(() => {
     const max = gv.byComuna?.[0]?.count || 1;
@@ -326,17 +569,14 @@ export function ViolenceDash({ palette }) {
     .filter((a) => a.label !== "Sin dato")
     .map((a, i) => ({ label: a.label, value: a.count, color: CAT[(i + 4) % CAT.length] }));
 
-  const vifDelta = vif?.delta;
-
   return (
     <>
       <header className="pls-sv-head">
         <div>
-          <div className="pls-sv-eyebrow">Histórico · Violencia de género e intrafamiliar</div>
+          <div className="pls-sv-eyebrow">Histórico · Violencia de género</div>
           <h1 className="pls-sv-title">Violencia de género en Cali</h1>
           <p className="pls-sv-lead">
-            {nfmt(gv.total)} eventos ({gv.yearRange}) · {nfmt(vif?.total)} casos de violencia
-            intrafamiliar ({vif?.yearRange})
+            {nfmt(gv.total)} eventos · {gv.yearRange} · base de la Alcaldía de Cali
           </p>
         </div>
         <span className="pls-sv-pill" title={online ? "Datos en vivo del backend" : "Datos demo locales"}>
@@ -349,9 +589,7 @@ export function ViolenceDash({ palette }) {
         <Kpi value={nfmt(gv.total)} label="Eventos de violencia de género" accent />
         <Kpi value={(hl.pctMujeres ?? "—") + "%"} label="De las víctimas son mujeres" />
         <Kpi value={"C" + (hl.topComuna ?? "—")} label="Comuna más afectada" />
-        <Kpi
-          value={vif?.lastFullYearCount ? nfmt(vif.lastFullYearCount) : "—"}
-          label={`VIF en ${vif?.lastFullYear ?? "—"}${vifDelta != null ? ` (${vifDelta > 0 ? "▲" : "▼"} ${Math.abs(vifDelta).toFixed(1)}%)` : ""}`} />
+        <Kpi value={(hl.pctAgresorConocido ?? pctAgresorConocido(gv.agresor)) + "%"} label="Agresor del entorno cercano" />
       </div>
 
       <div className="pls-sv-grid">
@@ -391,19 +629,12 @@ export function ViolenceDash({ palette }) {
           </p>
         </Card>
 
-        <Card title="Violencia intrafamiliar por año" sub={`${vif?.yearRange} · base MinDefensa (corte Cali)`} span>
-          <YearTrend data={vif?.byYear || []} />
-          <p className="pls-sv-note">
-            El último año del registro es parcial. Si tú o alguien cercano vive violencia
-            intrafamiliar: <b>Línea Púrpura 155</b> · emergencias <b>123</b> · Comisarías de Familia.
-          </p>
-        </Card>
       </div>
 
       <footer className="pls-sv-foot">
-        Fuentes: eventos de violencia de género en Santiago de Cali 2013–2022 (Datos Abiertos Colombia)
-        y violencia intrafamiliar de MinDefensa (corte Cali). El tipo de violencia y la relación con el
-        agresor no están disponibles en todos los años (los esquemas de la base cambian).
+        Fuente: eventos de violencia de género en Santiago de Cali 2013–2022 (Alcaldía · Datos Abiertos).
+        El tipo de violencia y la relación con el agresor no están disponibles en todos los años (los
+        esquemas de la base cambian). La serie de violencia intrafamiliar de MinDefensa está en su propia pestaña.
       </footer>
     </>
   );
@@ -651,7 +882,10 @@ export function ExternalDash({ palette }) {
 export default function StatsView({ palette }) {
   const [tab, setTab] = useState(() => {
     const h = (typeof window !== "undefined" ? window.location.hash : "").toLowerCase();
+    if (h.includes("intrafamiliar") || h.includes("vif")) return "vif";
     if (h.includes("violencia") || h.includes("genero")) return "violence";
+    if (h.includes("policia")) return "pol";
+    if (h.includes("salud")) return "salud";
     if (h.includes("fuentes") || h.includes("sources")) return "ext";
     return h.includes("previsto") || h.includes("forecast") || h.includes("pred") ? "pred" : "hist";
   });
@@ -659,13 +893,22 @@ export default function StatsView({ palette }) {
     <div className="pls-sv">
       <div className="pls-sv-tabs" role="tablist">
         <button role="tab" className={tab === "hist" ? "is-on" : ""} onClick={() => setTab("hist")}>
-          <span className="pls-sv-tab-i">▤</span> Histórico · datos
+          <span className="pls-sv-tab-i">▤</span> Hurtos
         </button>
         <button role="tab" className={tab === "pred" ? "is-on" : ""} onClick={() => setTab("pred")}>
           <span className="pls-sv-tab-i">◈</span> Previsto · IA
         </button>
+        <button role="tab" className={tab === "vif" ? "is-on" : ""} onClick={() => setTab("vif")}>
+          <span className="pls-sv-tab-i">⌂</span> Violencia intrafamiliar
+        </button>
         <button role="tab" className={tab === "violence" ? "is-on" : ""} onClick={() => setTab("violence")}>
-          <span className="pls-sv-tab-i">⚑</span> Violencia · género
+          <span className="pls-sv-tab-i">⚑</span> Violencia de género
+        </button>
+        <button role="tab" className={tab === "pol" ? "is-on" : ""} onClick={() => setTab("pol")}>
+          <span className="pls-sv-tab-i">⛨</span> Policía
+        </button>
+        <button role="tab" className={tab === "salud" ? "is-on" : ""} onClick={() => setTab("salud")}>
+          <span className="pls-sv-tab-i">✚</span> Salud
         </button>
         <button role="tab" className={tab === "ext" ? "is-on" : ""} onClick={() => setTab("ext")}>
           <span className="pls-sv-tab-i">⧉</span> Fuentes · SIJIN/ML
@@ -673,7 +916,10 @@ export default function StatsView({ palette }) {
       </div>
       {tab === "hist" && <HistoricalDash palette={palette} />}
       {tab === "pred" && <ForecastDash palette={palette} />}
+      {tab === "vif" && <VifDash palette={palette} />}
       {tab === "violence" && <ViolenceDash palette={palette} />}
+      {tab === "pol" && <PoliciaDash palette={palette} />}
+      {tab === "salud" && <SaludDash />}
       {tab === "ext" && <ExternalDash palette={palette} />}
     </div>
   );

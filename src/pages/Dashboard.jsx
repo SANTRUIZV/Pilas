@@ -1,7 +1,7 @@
 // Pilas Gov Dashboard — Secretaría de Seguridad
 import React, { useState, useMemo, useRef } from "react";
 import MapH3 from "../components/MapH3.jsx";
-import { HistoricalDash, ForecastDash, ViolenceDash } from "../components/Stats.jsx";
+import { HistoricalDash, ForecastDash, ViolenceDash, VifDash } from "../components/Stats.jsx";
 import { CRIMES, METRICS, ZONES } from "../data/data.js";
 import { KPI, DAILY, DRIFT, COMUNAS, ALERTS, FEED, PATROLS } from "../data/data-gov.js";
 import { useApiStatus, useApiData } from "../lib/hooks.js";
@@ -696,6 +696,7 @@ function AnalysisView({ period, setPeriod, year }) {
     { id: "comunas",  label: "Comunas" },
     { id: "forecast", label: "Pronóstico 24h" },
     { id: "profile",  label: "Perfil del delito" },
+    { id: "vif", label: "Violencia intrafamiliar" },
     { id: "violence", label: "Violencia de género" },
   ];
   return (
@@ -720,6 +721,7 @@ function AnalysisView({ period, setPeriod, year }) {
         {tab === "comunas"  && <ComunaTable year={year} />}
         {tab === "forecast" && <div className="pls-sv gov-intel-sv"><ForecastDash palette={GOV_PALETTE} /></div>}
         {tab === "profile"  && <div className="pls-sv gov-intel-sv"><HistoricalDash palette={GOV_PALETTE} /></div>}
+        {tab === "vif" && <div className="pls-sv gov-intel-sv"><VifDash palette={GOV_PALETTE} /></div>}
         {tab === "violence" && <div className="pls-sv gov-intel-sv"><ViolenceDash palette={GOV_PALETTE} /></div>}
       </div>
     </div>
